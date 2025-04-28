@@ -140,10 +140,11 @@ view model =
                 -- Camera is at the point (4, 2, 2),                             
                 -- looking at the point (0, 0, 0),                             
                 -- with positive Z as the 'up' direction                             
-                { viewpoint = Viewpoint3d.lookAt 
-                    { eyePoint = Point3d.meters 4 2 2                            
-                     ,focalPoint = Point3d.origin
-                     ,upDirection = Direction3d.positiveZ
+                { viewpoint = Viewpoint3d.orbitZ 
+                    { focalPoint = Point3d.origin
+                     ,azimuth = model.azimuth
+                     ,elevation = model.elevation
+                     ,distance = Quantity.Quantity 20
                     }
                  ,verticalFieldOfView = Angle.degrees 30
                 }
