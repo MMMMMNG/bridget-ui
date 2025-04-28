@@ -81,7 +81,7 @@ update message model =
                     newElevation =
                         model.elevation
                             |> Quantity.plus (dy |> Quantity.at rotationRate)
-                            |> Quantity.clamp (Angle.degrees -90) (Angle.degrees 90)
+                            |> Quantity.clamp (Angle.degrees 2) (Angle.degrees 90)
                 in
                 ( { model | azimuth = newAzimuth, elevation = newElevation }
                 , Cmd.none
@@ -144,7 +144,7 @@ view model =
                     { focalPoint = Point3d.origin
                      ,azimuth = model.azimuth
                      ,elevation = model.elevation
-                     ,distance = Quantity.Quantity 20
+                     ,distance = Quantity.Quantity 2
                     }
                  ,verticalFieldOfView = Angle.degrees 30
                 }
@@ -167,7 +167,7 @@ view model =
             , background = Scene3d.transparentBackground
 
             -- Size in pixels of the generated HTML element
-            , dimensions = ( Pixels.int 1024, Pixels.int 512 )
+            , dimensions = ( Pixels.int 2048, Pixels.int 1024 )
             }
         ]
     }
