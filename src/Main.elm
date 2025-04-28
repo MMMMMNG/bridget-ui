@@ -12,7 +12,6 @@ several fundamental concepts used in elm-3d-scene:
 import Angle exposing (Angle)
 import Camera3d
 import Color
-import Direction3d
 import Html exposing (Html)
 import Length
 import Pixels
@@ -25,6 +24,7 @@ import Pixels exposing (Pixels)
 import Browser
 import Browser.Events
 import Json.Decode as Decode exposing (Decoder)
+import Pieces exposing (initialCube)
 
 type alias Model =
     { azimuth : Angle -- Orbiting angle of the camera around the focal point
@@ -153,7 +153,7 @@ view model =
     , body =
         [ Scene3d.unlit
             { -- Our scene has a single 'entity' in it
-              entities = [ square ]
+              entities = [ square, initialCube ]
 
             -- Provide the camera to be used when rendering the scene
             , camera = camera
