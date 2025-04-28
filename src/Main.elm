@@ -167,7 +167,7 @@ view model =
             , background = Scene3d.transparentBackground
 
             -- Size in pixels of the generated HTML element
-            , dimensions = ( Pixels.int 400, Pixels.int 300 )
+            , dimensions = ( Pixels.int 1024, Pixels.int 512 )
             }
         ]
     }
