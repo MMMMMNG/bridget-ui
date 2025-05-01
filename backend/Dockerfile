@@ -1,0 +1,1 @@
+FROM gcr.io/bazel-public/bazel:8.2
