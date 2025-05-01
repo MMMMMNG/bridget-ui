@@ -142,3 +142,5 @@ ENV PATH=/root/.cabal/bin:/root/.local/bin:/opt/ghc/${GHC}/bin:$PATH
 ###############################################################################################################################
 
 USER ubuntu
+
+ENTRYPOINT ["sleep", "infinity"]
