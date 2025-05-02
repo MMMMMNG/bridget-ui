@@ -141,6 +141,6 @@ ENV PATH=/root/.cabal/bin:/root/.local/bin:/opt/ghc/${GHC}/bin:$PATH
 
 ###############################################################################################################################
 
-USER ubuntu
-
+RUN curl -L https://nixos.org/nix/install | bash -s -- --daemon
+#USER ubuntu #nix doesn't seem to work without root
 ENTRYPOINT ["sleep", "infinity"]
