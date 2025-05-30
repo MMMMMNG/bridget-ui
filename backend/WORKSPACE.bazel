@@ -19,25 +19,28 @@ http_archive(
     urls = ["https://github.com/tweag/inline-java/archive/81768558746dede0850bb6e839d8efd5cae66bbb.zip"],
 )
 
-#registering the ghc compiler according to https://rules-haskell.readthedocs.io/en/latest/haskell-use-cases.html#picking-a-compiler
+load("@inline-java//:config_settings/setup.bzl", "config_settings")
+config_settings("bridget_ui")
 
-load(
-    "@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl",
-    "nixpkgs_git_repository",
-)
-
-nixpkgs_git_repository(
-    name = "nixpkgs",
-    revision = "19.03", # Any tag or commit hash
-)
-
-load(
-    "@rules_haskell//haskell:nixpkgs.bzl",
-    "haskell_register_ghc_nixpkgs",
-)
-
-haskell_register_ghc_nixpkgs(
-    version = "9.0.0.20201227", # Any GHC version
-    attribute_path = "ghc", # The Nix attribute path to the compiler.
-    repositories = {"nixpkgs": "@nixpkgs"},
-)
+##registering the ghc compiler according to https://rules-haskell.readthedocs.io/en/latest/haskell-use-cases.html#picking-a-compiler
+#
+#load(
+#    "@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl",
+#    "nixpkgs_git_repository",
+#)
+#
+#nixpkgs_git_repository(
+#    name = "nixpkgs",
+#    revision = "19.03", # Any tag or commit hash
+#)
+#
+#load(
+#    "@rules_haskell//haskell:nixpkgs.bzl",
+#    "haskell_register_ghc_nixpkgs",
+#)
+#
+#haskell_register_ghc_nixpkgs(
+#    version = "9.0.0.20201227", # Any GHC version
+#    attribute_path = "ghc", # The Nix attribute path to the compiler.
+#    repositories = {"nixpkgs": "@nixpkgs"},
+#)
