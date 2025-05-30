@@ -14,7 +14,7 @@ haskell_repositories()
 
 http_archive(
     name = "inline-java",
-    sha256 = "2b36e26fde296dc9fbaeed087c898fdce23af0247592e897c317d19345b0e259",
+    sha256 = "047bf110977709f2d3b4ac1673a55d65b36a496cb0cad8ed1194cd80045d10db",
     strip_prefix = "inline-java-81768558746dede0850bb6e839d8efd5cae66bbb",
     urls = ["https://github.com/tweag/inline-java/archive/81768558746dede0850bb6e839d8efd5cae66bbb.zip"],
 )
