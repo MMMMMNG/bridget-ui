@@ -1,0 +1,20 @@
+workspace(name = "bridget_ui_ws")
+
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "rules_haskell",
+    sha256 = "2b36e26fde296dc9fbaeed087c898fdce23af0247592e897c317d19345b0e259",
+    strip_prefix = "rules_haskell-7a7f8545789dc4f3bc0780d5725e1337bb494ea6",
+    urls = ["https://github.com/tweag/rules_haskell/archive/7a7f8545789dc4f3bc0780d5725e1337bb494ea6.zip"],
+)
+
+load("@rules_haskell//haskell:repositories.bzl", "haskell_repositories")
+haskell_repositories()
+
+http_archive(
+    name = "inline-java",
+    sha256 = "2b36e26fde296dc9fbaeed087c898fdce23af0247592e897c317d19345b0e259",
+    strip_prefix = "inline-java-81768558746dede0850bb6e839d8efd5cae66bbb",
+    urls = ["https://github.com/tweag/inline-java/archive/81768558746dede0850bb6e839d8efd5cae66bbb.zip"],
+)
