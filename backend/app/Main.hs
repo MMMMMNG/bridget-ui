@@ -19,10 +19,26 @@ main = do
     let jarPath = Runfiles.rlocation r "bridget_ui_ws/jar_deploy.jar"
         jvmArgs = [ "-Djava.class.path=" <> fromString jarPath ]
     withJVM jvmArgs $ handle (showException >=> Text.putStrLn) [java| {
-      org.reflections.Reflections reflections = new org.reflections.Reflections(".");
+        java.util.List<java.lang.ClassLoader> classLoadersList = new java.util.LinkedList<java.lang.ClassLoader>();
+        classLoadersList.add(org.reflections.util.ClasspathHelper.contextClassLoader());
+        classLoadersList.add(org.reflections.util.ClasspathHelper.staticClassLoader());
 
-      String s = reflections.getSubTypesOf(Object.class).toString();
-      //String s = Main.tBlockShape.toString();
+
+        org.reflections.Reflections reflections = new org.reflections.Reflections(
+            new org.reflections.util.ConfigurationBuilder()
+                .setScanners(
+                    new org.reflections.scanners.SubTypesScanner(false /* don't exclude Object.class */),
+                    new org.reflections.scanners.ResourcesScanner()
+                )
+                .setUrls(org.reflections.util.ClasspathHelper.forClassLoader(classLoadersList.toArray(new java.lang.ClassLoader[0])))
+                .filterInputsBy(new org.reflections.util.FilterBuilder().includePackage("java"))
+        );
+
+        java.lang.String s = reflections.getSubTypesOf(java.lang.Object.class).toString();
+        
+        System.out.println("Subtypes found: " + s); // Added for demonstration of output
+      //int[][] blockShape = bridget.Main.tBlockShape;
       System.out.println(s);
+      //System.out.println(blockShape.toString());
       }
    |]

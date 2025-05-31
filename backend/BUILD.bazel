@@ -6,12 +6,13 @@ load(
 java_deps = [
     "@maven//:org_reflections_reflections_0_10_2",
     "@maven//:org_apache_commons_commons_collections4_4_1",
+    "@maven//:org_slf4j_slf4j_simple_2_0_17"
     ]
 
 java_binary(
     name = "jar",
-    main_class = "Main",
-    srcs = glob(["wodsBridget/src/*.java"]),
+    main_class = "bridget.Main",
+    srcs = glob(["wodsBridget/src/bridget/*.java"]),
     runtime_deps = java_deps,
 )
 

@@ -256,6 +256,7 @@ maven_install(
         "com.wizzardo.tools:tools-collections:0.23",
         "com.wizzardo.tools:tools-interfaces:0.23",
         "org.reflections:reflections:0.10.2",
+        "org.slf4j:slf4j-simple:2.0.17",
     ],
     repositories = [
         "https://maven.google.com",
