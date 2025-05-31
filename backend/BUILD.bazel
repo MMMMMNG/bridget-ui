@@ -5,7 +5,7 @@ load(
 
 java_library(
     name = "wods_bridget_java",
-    srcs = glob(["wodsBridget/src/*.java"]),
+    srcs = glob(["wodsBridget/src/**/*.java"]),
 )
 
 
@@ -18,7 +18,7 @@ java_deps = [
 
 java_binary(
     name = "jar",
-    main_class = "Main",
+    main_class = "brgt.Main",
     runtime_deps = java_deps,
 )
 

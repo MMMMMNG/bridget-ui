@@ -20,8 +20,8 @@ main = do
         jvmArgs = [ "-Djava.class.path=" <> fromString jarPath ]
     withJVM jvmArgs $ handle (showException >=> Text.putStrLn) [java| {
 
-      int[][] blockShape = Main.tBlockShape;
-      PieceInventory pi = new PieceInventory();
+      int[][] blockShape = brgt.Main.tBlockShape;
+      brgt.PieceInventory pi = new brgt.PieceInventory();
       System.out.println(pi.hasPiece("L"));
       System.out.println(blockShape.toString());
       }
