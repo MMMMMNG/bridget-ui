@@ -18,11 +18,28 @@ main = do
     r <- Runfiles.create
     let jarPath = Runfiles.rlocation r "bridget_ui_ws/jar_deploy.jar"
         jvmArgs = [ "-Djava.class.path=" <> fromString jarPath ]
-    withJVM jvmArgs $ handle (showException >=> Text.putStrLn) [java| {
+    withJVM jvmArgs $ do
+        handle (showException >=> Text.putStrLn) [java| { System.out.println("Hi Haskell!");} |]
 
-      int[][] blockShape = brgt.Main.tBlockShape;
-      brgt.PieceInventory pi = new brgt.PieceInventory();
-      System.out.println(pi.hasPiece("L"));
-      System.out.println(blockShape.toString());
-      }
-   |]
+        liftIO $ scotty 3000 $ do
+            get "/" $ do
+                html "<h1>Welcome To bridget ui!</h1>"
+
+            get "/greet/:name" $ do
+                name <- param "name" :: ActionM Text
+                -- Interact with JVM to process the name
+                -- Note: `java` quasi-quote implicitly uses the JVM context from `withJVM`
+                -- `liftAndCatchIO` is used to run `IO` actions (like `java`) within Scotty's `ActionM` monad
+                javaMessage <- liftAndCatchIO $ do
+                    [java| {
+                        public String getGreeting(String name) {
+                            return "Hello, " + name + " from Java!";
+                        }
+                    }
+                    |]
+                    -- Call the Java method, passing the Haskell Text parameter
+                    -- `reify` and `reflect` handle conversion between Haskell and Java types
+                    [java| @(String) getGreeting($(String name)) |]
+                html $ "<h2>" <> javaMessage <> "</h2>"
+
+    -- The `scotty` function runs indefinitely.
