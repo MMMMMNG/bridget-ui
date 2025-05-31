@@ -1,10 +1,10 @@
-version: '3.8'
-
 #bridget-ui development environment
 services:
   backend:
     build:
-      context: .
-      dockerfile: dev-backend.Dockerfile
+      context: ../../backend
+      dockerfile: ../compose/dev/dev-backend.Dockerfile
     volumes:
       - ../../backend:/app/
+    ports:
+      - "3000:3000"
