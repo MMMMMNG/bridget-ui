@@ -9,19 +9,6 @@ http_archive(
     urls = ["https://github.com/tweag/inline-java/archive/81768558746dede0850bb6e839d8efd5cae66bbb.zip"],
 )
 
-##load rules_sh????
-http_archive(
-    name = "rules_sh",
-    # Replace git revision and sha256.
-    sha256 = "3c599e2912fd443f816d6b030fcd53140ad258df17d3d84cf4601e5ce75c5486",
-    strip_prefix = "rules_sh-dfa23b9e2fb4258cbec8f64bcecda4533f811bcb",
-    urls = ["https://github.com/tweag/rules_sh/archive/dfa23b9e2fb4258cbec8f64bcecda4533f811bcb.tar.gz"],
-)
-load("@rules_sh//sh:repositories.bzl", "rules_sh_dependencies")
-rules_sh_dependencies()
-load("@rules_sh//sh:posix.bzl", "sh_posix_configure")
-sh_posix_configure()
-
 #################
 ################# COPY inline-java WORKSPACE file (because there seems to be no .bzl file for setting up transitive dependencies 🙄)
 #################

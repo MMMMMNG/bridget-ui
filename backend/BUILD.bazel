@@ -4,7 +4,7 @@ load(
 )
 
 haskell_binary(
-    name = "bridget-ui",
+    name = "bridget_backend",
     srcs = ['app/Main.hs'],
     extra_srcs = ["@openjdk//:rpath"],
     compiler_flags = [
@@ -12,11 +12,11 @@ haskell_binary(
         "-threaded",
     ],
     deps = [
-        "//jvm",
-        "//jni",
-        "//:inline-java",
+        "@inline-java//jvm",
+        "@inline-java//jni",
+        "@inline-java//:inline-java",
         "@stackage//:base",
         "@stackage//:text",
     ],
-    plugins = ["//:inline-java-plugin"],
+    plugins = ["@inline-java//:inline-java-plugin"],
 )
