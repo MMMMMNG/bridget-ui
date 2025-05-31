@@ -31,17 +31,15 @@ main = do
                     new org.reflections.scanners.ResourcesScanner()
                 )
                 .setUrls(org.reflections.util.ClasspathHelper.forClassLoader(classLoadersList.toArray(new java.lang.ClassLoader[0])))
-                .filterInputsBy(new org.reflections.util.FilterBuilder().includePackage("java"))
+                .filterInputsBy(new org.reflections.util.FilterBuilder().includePackage("org.bridget"))
         );
 
         java.lang.String s = reflections.getSubTypesOf(java.lang.Object.class).toString();
-        
+      
         System.out.println("Subtypes found: " + s); // Added for demonstration of output
-      //int[][] blockShape = bridget.Main.tBlockShape;
-      bridget.PieceInventory pi = new bridget.PieceInventory();
+      int[][] blockShape = org.bridget.Main.tBlockShape;
+      org.bridget.PieceInventory pi = new org.bridget.PieceInventory();
       System.out.println(pi.hasPiece("L"));
-
-      System.out.println(s);
-      //System.out.println(blockShape.toString());
+      System.out.println(blockShape.toString());
       }
    |]

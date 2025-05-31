@@ -3,7 +3,14 @@ load(
   "haskell_binary",
 )
 
+java_library(
+    name = "wods_bridget_java",
+    srcs = glob(["wodsBridget/src/**/*.java"]),
+)
+
+
 java_deps = [
+    "wods_bridget_java",
     "@maven//:org_reflections_reflections_0_10_2",
     "@maven//:org_apache_commons_commons_collections4_4_1",
     "@maven//:org_slf4j_slf4j_simple_2_0_17"
@@ -11,8 +18,7 @@ java_deps = [
 
 java_binary(
     name = "jar",
-    main_class = "dummybridget.Main",
-    srcs = glob(["wodsBridget/src/bridget/*.java"]),
+    main_class = "org.bridget.Main",
     runtime_deps = java_deps,
 )
 
