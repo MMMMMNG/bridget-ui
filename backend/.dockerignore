@@ -1,0 +1,4 @@
+dist-newstyle/
+wodsBridget/
+!wodsBridget/src
+bazel-*

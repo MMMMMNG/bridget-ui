@@ -1,0 +1,6 @@
+#bridget-ui production environment
+services:
+  backend:
+    build:
+      context: ../../backend
+#    volumes:
