@@ -3,6 +3,12 @@ load(
   "haskell_binary",
 )
 
+java_binary(
+    name = "jar",
+    main_class = "Main",
+    srcs = glob(["wodsBridget/src/*.java"]),
+)
+
 haskell_binary(
     name = "bridget_backend",
     srcs = ['app/Main.hs'],
@@ -12,11 +18,15 @@ haskell_binary(
         "-threaded",
     ],
     deps = [
+        "@rules_haskell//tools/runfiles",
         "@inline-java//jvm",
         "@inline-java//jni",
         "@inline-java//:inline-java",
         "@stackage//:base",
         "@stackage//:text",
+    ],
+    data = [
+        ":jar_deploy.jar",
     ],
     plugins = ["@inline-java//:inline-java-plugin"],
 )
