@@ -58,6 +58,10 @@ load("@rules_haskell//haskell:cabal.bzl", "stack_snapshot")
 stack_snapshot(
     name = "stackage",
     packages = [
+        "warp-3.3.22",
+        "wai-3.2.4",
+        "wai-extra-3.1.14",
+        "scotty-0.22", #web server for bridget ui backend
         "Cabal",
         "aeson",
         "async",
@@ -122,6 +126,7 @@ stack_snapshot(
             ],
         },
     local_snapshot = "//:snapshot-9.0.2.yaml",
+    stack_snapshot_json = "//:stackage_snapshot.json",
     # stack = "@stack_ignore_global_hints//:bin/stack" if ghc_version == "9.0.1" else None,
 )
 
