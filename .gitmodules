@@ -1,0 +1,3 @@
+[submodule "backend/wodsBridget"]
+	path = backend/wodsBridget
+	url = https://github.com/benajakuhn/wodsBridget
