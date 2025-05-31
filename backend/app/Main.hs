@@ -16,16 +16,13 @@ import Language.Java.Inline
 main :: IO ()
 main = do
     r <- Runfiles.create
-    let jarPath = Runfiles.rlocation r "io_tweag_inline_java/examples/classpath/jar_deploy.jar"
+    let jarPath = Runfiles.rlocation r "bridget_ui_ws/jar_deploy.jar"
         jvmArgs = [ "-Djava.class.path=" <> fromString jarPath ]
     withJVM jvmArgs $ handle (showException >=> Text.putStrLn) [java| {
-      org.apache.commons.collections4.OrderedMap map =
-        new org.apache.commons.collections4.map.LinkedMap();
-      map.put("FIVE", "5");
-      map.put("SIX", "6");
-      map.put("SEVEN", "7");
-      System.out.println(map.firstKey());
-      System.out.println(map.nextKey("FIVE"));
-      System.out.println(map.nextKey("SIX"));
+      org.reflections.Reflections reflections = new org.reflections.Reflections(".");
+
+      String s = reflections.getSubTypesOf(Object.class).toString();
+      //String s = Main.tBlockShape.toString();
+      System.out.println(s);
       }
    |]

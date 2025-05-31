@@ -3,10 +3,16 @@ load(
   "haskell_binary",
 )
 
+java_deps = [
+    "@maven//:org_reflections_reflections_0_10_2",
+    "@maven//:org_apache_commons_commons_collections4_4_1",
+    ]
+
 java_binary(
     name = "jar",
     main_class = "Main",
     srcs = glob(["wodsBridget/src/*.java"]),
+    runtime_deps = java_deps,
 )
 
 haskell_binary(
@@ -24,7 +30,7 @@ haskell_binary(
         "@inline-java//:inline-java",
         "@stackage//:base",
         "@stackage//:text",
-    ],
+    ] + java_deps,
     data = [
         ":jar_deploy.jar",
     ],
