@@ -38,6 +38,9 @@ main = do
         
         System.out.println("Subtypes found: " + s); // Added for demonstration of output
       //int[][] blockShape = bridget.Main.tBlockShape;
+      bridget.PieceInventory pi = new bridget.PieceInventory();
+      System.out.println(pi.hasPiece("L"));
+
       System.out.println(s);
       //System.out.println(blockShape.toString());
       }

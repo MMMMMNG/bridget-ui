@@ -11,7 +11,7 @@ java_deps = [
 
 java_binary(
     name = "jar",
-    main_class = "bridget.Main",
+    main_class = "dummybridget.Main",
     srcs = glob(["wodsBridget/src/bridget/*.java"]),
     runtime_deps = java_deps,
 )
