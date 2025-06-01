@@ -310,8 +310,7 @@ update msg model =
         PlacePieceHttpResult (Ok (Just gs)) -> update (PlacePieceResult gs) model
 
         PlacePiece ->
-            -- ...your logic for sending the move to the backend...
-            ( model, Cmd.none )
+            (model, submitMove model.pieceType model.pieceRotIndex model.pieceX model.pieceY)
 
         PlacePieceResult gamestate ->
             let
@@ -351,10 +350,6 @@ update msg model =
               }
             , Cmd.none
             )
-            ( { model | currentPlayer = nextPlayer }, Cmd.none )
-        PlacePieceResult gamestate -> 
-            (model, submitMove model.pieceType model.pieceRotIndex model.pieceX model.pieceY)
-
 
 
 -- VIEW
