@@ -20,6 +20,21 @@ import qualified Data.Text.Lazy as TL
 
 import Control.Concurrent (runInBoundThread)
 
+data GameState = GameState
+  { gameOver    :: Bool
+  , moveInvalid :: Bool
+  , winner      :: DT.Text
+  , board       :: [[[Int]]]
+  } deriving (Show, Eq)
+
+makeMove :: DT.Text -> DT.Text -> ActionM GameState
+makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
+    jal <- reflect algo
+    jmv <- reflect mv
+
+    jgs <- [java| brgt.GameState.playerMove($jal, $jmv) |]
+    gs <- reify jgs
+    pure gs
 
 putStringThroughJVM :: String -> IO DT.Text
 putStringThroughJVM thestr = runInBoundThread $ runInAttachedThread $ do
