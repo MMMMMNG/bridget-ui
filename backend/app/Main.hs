@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QualifiedDo #-}
 module Main where
 
 import Control.Exception (handle)
@@ -11,14 +12,20 @@ import qualified Bazel.Runfiles as Runfiles
 import qualified Data.Text as DT
 import qualified Data.Text.IO as DTIO
 import Foreign.JNI (showException, withJVM, runInAttachedThread)
-import Foreign.JNI.Types
-import Language.Java.Inline
-import Language.Java (reify, reflect, Interpretation, Reify, Reflect)
+import qualified Language.Java as NonLinear
+import Language.Java.Inline.Safe
+import Language.Java.Safe
 
 import Web.Scotty
 import qualified Data.Text.Lazy as TL
 
 import Control.Concurrent (runInBoundThread)
+import Prelude.Linear (Ur(..))
+import qualified System.IO.Linear as Linear
+import qualified Control.Functor.Linear as Linear
+import Control.Monad.IO.Class.Linear (MonadIO)
+
+import Data.Aeson (ToJSON(..), encode, object, (.=))
 
 data GameState = GameState
   { gameOver    :: Bool
@@ -27,51 +34,41 @@ data GameState = GameState
   , board       :: [[[Int]]]
   } deriving (Show, Eq)
 
-withStatic [d|
-    instance Interpretation GameState where
-        type Interp GameState = 'Class "brgt.GameInterface.GameState"
-    
-    instance Reify GameState where
-        reify jobj = do
-            let method = unsafeDupablePerformIO $ do
-                  klass <- getClass (SClass "brgt.GameInterface.GameState")
-                  m <- getMethodID klass "isGameOver"
-                         (methodSignature [] (SPrim "boolean"))
-                  deleteLocalRef klass
-                  return m
-            go <- callBooleanMethod jobj method []
-            pure $ GameState {gameOver = go, moveInvalid = False, winner = DT.empty, board = [[[1]]]}
-    
-    instance Reflect GameState where
-        reflect = new
-    |]
+-- | Reads a Java GameState object and converts it to a Haskell GameState record.
+readGameState :: MonadIO m => J ('Class "brgt.GameInterface$GameState") -> m GameState
+readGameState jGameState = Linear.do
+  -- Read boolean fields
+  jGameOver <- [java| $jGameState.isGameOver() |]
+  gameOverHaskell <- NonLinear.reify jGameOver
+
+  jMoveInvalid <- [java| $jGameState.isMoveInvalid() |]
+  moveInvalidHaskell <- NonLinear.reify jMoveInvalid
+
+  -- Read String winner
+  jWinner <- [java| $jGameState.getWinner() |]
+  winnerHaskell <- NonLinear.reify jWinner
+
+  -- Read int[][][] board
+  jBoard <- [java| $jGameState.getBoard() |]
+  -- Reify converts a Java array to a Haskell list of lists
+  boardHaskell <- NonLinear.reify jBoard
+
+  Linear.return $ Ur GameState
+    { gameOver = gameOverHaskell
+    , moveInvalid = moveInvalidHaskell
+    , winner = winnerHaskell
+    , board = boardHaskell
+    }
+
 
 makeMove :: DT.Text -> DT.Text -> ActionM GameState
 makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
-    jal <- reflect algo
-    jmv <- reflect mv
+    jal <- NonLinear.reflect algo
+    jmv <- NonLinear.reflect mv
 
     jgs <- [java| brgt.GameState.playerMove($jal, $jmv) |]
-    gs <- reify jgs
+    gs <- NonLinear.reify jgs
     pure gs
-
-putStringThroughJVM :: String -> IO DT.Text
-putStringThroughJVM thestr = runInBoundThread $ runInAttachedThread $ do
-    rn <- reflect (DT.pack (thestr <> " woah dude"))
-    s <- [java| {
-                String strr = $rn;
-                return String.join(", ", strr, "yay"); 
-            }
-        |]
-    ss <- reify s
-    pure (ss :: DT.Text)
-
-scottyPutStringJVM :: String -> ActionM DT.Text
-scottyPutStringJVM a = liftIO $ putStringThroughJVM a
-
-
-
-
 
 main :: IO ()
 main = do
@@ -85,19 +82,16 @@ main = do
                 } 
             |]
 
-        rr <- putStringThroughJVM "NAOAOAO"
-        DTIO.putStrLn rr
 
         liftIO $ scotty 3000 $ do
             get "/" $ do
                 html "<h1>Welcome To bridget ui!</h1>"
 
-            get "/greet/:name" $ do
-                name <- pathParam "name"
-                liftIO $ putStrLn (name :: String)
+            post "/move/:mvstr" $ do
+                mvstr <- pathParam "mvstr"
+                liftIO $ putStrLn ("command: " <> mvstr)
 
-
-                javaMessage <- scottyPutStringJVM "egz" 
+                gs <- makeMove (DT.pack "MINIMAX") (DT.pack mvstr)
 
                 html $ "<h2>" <> TL.fromStrict javaMessage <> TL.pack name <> "</h2>"
 

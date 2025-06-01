@@ -37,7 +37,9 @@ haskell_binary(
         "@inline-java//:inline-java",
         "@stackage//:base",
         "@stackage//:text",
-        "@stackage//:scotty", #web server
+        "@stackage//:scotty",      #web server
+        "@stackage//:aeson",       #json
+        "@stackage//:linear-base", #linear types
     ] + java_deps,
     data = [
         ":jar_deploy.jar",
