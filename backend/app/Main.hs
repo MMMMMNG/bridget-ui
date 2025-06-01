@@ -13,9 +13,10 @@ import qualified Bazel.Runfiles as Runfiles
 import qualified Data.Text as DT
 import qualified Data.Text.IO as DTIO
 import Foreign.JNI (showException, withJVM, runInAttachedThread)
-import qualified Language.Java as NonLinear
+--import qualified Language.Java as NonLinear
+import Language.Java
 import Language.Java.Inline.Safe
-import Language.Java.Safe
+--import Language.Java.Safe
 import Foreign.JNI.Safe (newLocalRef)
 
 import Web.Scotty
@@ -23,8 +24,8 @@ import qualified Data.Text.Lazy as TL
 
 import Control.Concurrent (runInBoundThread)
 import Prelude.Linear (Ur(..))
-import qualified System.IO.Linear as Linear
-import qualified Control.Functor.Linear as Linear
+--import qualified System.IO.Linear as Linear
+--import qualified Control.Functor.Linear as Linear
 import Control.Monad.IO.Class.Linear (MonadIO)
 
 import Data.Aeson (ToJSON(..), encode, object, (.=))
@@ -37,43 +38,37 @@ data GameState = GameState
   } deriving (Show, Eq)
 
 -- | Reads a Java GameState object and converts it to a Haskell GameState record.
-readGameState :: MonadIO m => J ('Class "brgt.GameInterface$GameState") %1 -> m GameState
-readGameState jGameState = Linear.do
-  -- each reference must be used exactly once (linear types)
-  (it1, i') <- newLocalRef jGameState
-  (it2, i'') <- newLocalRef i'
-  (it3, it4) <- newLocalRef i''
-  -- Read boolean fields
-  jGameOver <- [java| $it1.isGameOver() |]
-  gameOverHaskell <- NonLinear.reify (unsafeCast jGameOver)
+readGameState :: MonadIO m => J ('Class "brgt.GameInterface$GameState") -> m GameState
+readGameState jGameState = liftIO $ do
+  -- No newLocalRef needed as we are not in a linear context
+  -- Direct Java calls are fine here with the non-linear interface
+  jGameOver <- coerce [java| $jGameState.isGameOver() |]
+  --gameOverHaskell <- coerce (jGameOver :: J ('Prim "boolean"))
 
-  jMoveInvalid <- [java| $it2.isMoveInvalid() |]
-  moveInvalidHaskell <- NonLinear.reify (unsafeCast jMoveInvalid)
+  jMoveInvalid <- coerce [java| $jGameState.isMoveInvalid() |]
+  --moveInvalidHaskell <- coerce (jMoveInvalid :: J ('Prim "boolean"))
 
-  -- Read String winner
-  jWinner <- [java| $it3.getWinner() |]
-  winnerHaskell <- NonLinear.reify (unsafeCast jWinner)
+  jWinner <- [java| $jGameState.getWinner() |]
+  winnerHaskell <- reify (jWinner :: J ('Class "java.lang.String") )
 
-  -- Read int[][][] board
-  jBoard <- [java| $it4.getBoard() |]
-  -- Reify converts a Java array to a Haskell list of lists
-  boardHaskell <- NonLinear.reify (unsafeCast jBoard)
+  jBoard <- [java| $jGameState.getBoard() |]
+  boardHaskell <- reify (jBoard :: J ('Array ('Array ('Array ('Prim "int")))))
 
-  Linear.return $ Ur GameState
-    { gameOver = gameOverHaskell
+  pure GameState
+    { gameOver    = gameOverHaskell
     , moveInvalid = moveInvalidHaskell
-    , winner = winnerHaskell
-    , board = boardHaskell
+    , winner      = winnerHaskell
+    , board       = boardHaskell
     }
 
 
 makeMove :: DT.Text -> DT.Text -> ActionM GameState
 makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
-    jal <- NonLinear.reflect algo
-    jmv <- NonLinear.reflect mv
+    jal <- reflect algo
+    jmv <- reflect mv
 
     jgs <- [java| brgt.GameState.playerMove($jal, $jmv) |]
-    gs <- NonLinear.reify jgs
+    gs <- reify jgs
     pure gs
 
 main :: IO ()
