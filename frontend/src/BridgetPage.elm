@@ -20,6 +20,7 @@ import Url.Builder
 import Http
 import Types exposing (..)
 import View exposing (view)
+import Utils exposing (mouseDecoder, keyCheck, keyToMsg)
 
 -- INIT
 
