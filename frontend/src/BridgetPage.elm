@@ -1,7 +1,6 @@
 module BridgetPage exposing (main)
 
 import Angle
-import Axis3d
 import Block3d
 import Browser
 import Browser.Dom as Dom
@@ -19,13 +18,11 @@ import Point3d
 import Scene3d
 import Scene3d.Material as Material
 import Task
-import Vector3d
 import Viewpoint3d
 import Html.Events
 import Rotations
 
 -- MODEL
-
 
 type PieceType
     = LShape
@@ -45,7 +42,7 @@ type alias Model =
     , shiftKeyPressed : Bool
     , pieceX : Int
     , pieceY : Int
-    , pieceZ : Int           -- NEW: z coordinate
+    , pieceZ : Int
     , pieceType : PieceType
     }
 
@@ -56,11 +53,11 @@ type Msg
     | NoOp
     | WindowResize Float Float
     | KeyChanged Bool
-    | MovePiece Int Int         -- NEW
-    | RotatePiece Axis Int      -- NEW
+    | MovePiece Int Int
+    | RotatePiece Axis Int
     | SwitchPieceType
 
-type Axis = X | Y | Z          -- NEW
+type Axis = X | Y | Z 
 
 
 
@@ -77,7 +74,7 @@ init _ =
       , windowHeight = 0
       , shiftKeyPressed = False
       , pieceRotIndex = 0
-      , pieceX = 3    -- Spawn at 3,3,0
+      , pieceX = 3
       , pieceY = 3
       , pieceZ = 0
       , pieceType = LShape
@@ -112,7 +109,6 @@ update msg model =
             )
 
         MouseMove x y ->
-            -- Only allow camera movement, not piece rotation by mouse
             case ( model.isMouseDown, model.lastMousePos ) of
                 ( True, Just ( lastX, lastY ) ) ->
                     let
@@ -165,7 +161,6 @@ update msg model =
 
                 newX = clamp minX maxX (model.pieceX + dx)
                 newY = clamp minY maxY (model.pieceY + dy)
-                -- For now, keep Z fixed at 0 (or add controls to move in Z if desired)
                 newZ = clamp minZ maxZ model.pieceZ
             in
             ( { model | pieceX = newX, pieceY = newY, pieceZ = newZ }, Cmd.none )
@@ -174,7 +169,7 @@ update msg model =
             let
                 (rotations, maxIndex) =
                     case model.pieceType of
-                        LShape -> (Rotations.lBlockRotations, 24) -- Use 12 L block rotations
+                        LShape -> (Rotations.lBlockRotations, 24)
                         TShape -> (Rotations.tBlockRotations, 12)
                         ZShape -> (Rotations.zBlockRotations, 12)
                         OShape -> (Rotations.oBlockRotations, 2)
@@ -188,8 +183,32 @@ update msg model =
                         0
                     else
                         idx
+
+                cubeOffsets = getCubeOffsets model.pieceType newIndex
+                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+
+                minX = 0 - minDx
+                maxX = boardSize - 1 - maxDx
+                minY = 0 - minDy
+                maxY = boardSize - 1 - maxDy
+                minZ = 0 - minDz
+                maxZ = boardHeight - 1 - maxDz
+
+                newX = clamp minX maxX model.pieceX
+                newY = clamp minY maxY model.pieceY
+                newZ = clamp minZ maxZ model.pieceZ
             in
-            ( { model | pieceRotIndex = newIndex }
+            ( { model
+                | pieceRotIndex = newIndex
+                , pieceX = newX
+                , pieceY = newY
+                , pieceZ = newZ
+              }
             , Cmd.none
             )
 
@@ -201,8 +220,36 @@ update msg model =
                         TShape -> ZShape
                         ZShape -> OShape
                         OShape -> LShape
+
+                newRotIndex = 0
+                cubeOffsets = getCubeOffsets newType newRotIndex
+                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+
+                minX = 0 - minDx
+                maxX = boardSize - 1 - maxDx
+                minY = 0 - minDy
+                maxY = boardSize - 1 - maxDy
+                minZ = 0 - minDz
+                maxZ = boardHeight - 1 - maxDz
+
+                newX = clamp minX maxX model.pieceX
+                newY = clamp minY maxY model.pieceY
+                newZ = clamp minZ maxZ model.pieceZ
             in
-            ( { model | pieceType = newType, pieceRotIndex = 0 }, Cmd.none )
+            ( { model
+                | pieceType = newType
+                , pieceRotIndex = newRotIndex
+                , pieceX = newX
+                , pieceY = newY
+                , pieceZ = newZ
+              }
+            , Cmd.none
+            )
 
 
 
@@ -221,7 +268,6 @@ squareSize =
 
 chessboard : List (Scene3d.Entity ())
 chessboard =
-    -- Only draw the board at z = 0 (centered), but shift it down by 0.5
     List.concatMap
         (\y ->
             List.map
@@ -258,7 +304,7 @@ compassEntities : List (Scene3d.Entity ())
 compassEntities =
     let
         labelSize = ( Length.meters 0.8, Length.meters 0.8, Length.meters 0.05 )
-        z = 0 - (toFloat boardHeight - 1) / 2 - 0.5 -- Place compass at same z as chessboard
+        z = 0 - (toFloat boardHeight - 1) / 2 - 0.5
         n = Block3d.centeredOn (Frame3d.atPoint (Point3d.meters 0 -4.5 z)) labelSize
                 |> Scene3d.blockWithShadow (Material.matte (Color.rgb255 200 0 0))
         s = Block3d.centeredOn (Frame3d.atPoint (Point3d.meters 0 4.5 z)) labelSize
@@ -349,14 +395,12 @@ view model =
         entities =
             chessboard ++ [ gamePiece model ] ++ compassEntities
 
-        -- Always use the first block in the current rotation as the center
         cubeOffsets = getCubeOffsets model.pieceType model.pieceRotIndex
         centerBlock =
             case cubeOffsets of
                 first :: _ -> first
                 [] -> { x = 0, y = 0, z = 0 }
 
-        -- Get the actual rotation index from Rotations.elm
         rotationIndexFromElm =
             let
                 rotations =
