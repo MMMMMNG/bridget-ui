@@ -13,24 +13,13 @@ import qualified Bazel.Runfiles as Runfiles
 import qualified Data.Text as DT
 import qualified Data.Text.IO as DTIO
 import Foreign.JNI (showException, runInAttachedThread)
---import qualified Language.Java as NonLinear
 import Language.Java
 import Language.Java.Inline
---import Language.Java.Inline.Safe
---import Language.Java.Safe
---import Foreign.JNI.Safe (newLocalRef)
-
 import Web.Scotty
---import qualified Data.Text.Lazy as TL
-
 import Control.Concurrent (runInBoundThread)
---import Prelude.Linear (Ur(..))
---import qualified System.IO.Linear as Linear
---import qualified Control.Functor.Linear as Linear
---import Control.Monad.IO.Class.Linear (MonadIO)
-
 import Data.Aeson (ToJSON(..), object, (.=))
 
+-- | represent the return type from java when making a move
 data GameState = GameState
   { gameOver    :: Bool
   , moveInvalid :: Bool
@@ -62,12 +51,14 @@ readGameState jGameState = do
     , board       = boardHaskell
     }
 
+-- | Makes GameState serializable (JSON)
 instance ToJSON GameState where
   toJSON gs = object [  "isGameOver" .= gameOver gs, 
                         "isLastMoveInvalid" .= moveInvalid gs, 
                         "winner" .= winner gs, 
                         "board" .= board gs]
 
+-- | Attaches to the JVM and calls GameInterface.playerMove(), yielding the return value
 makeMove :: DT.Text -> DT.Text -> ActionM GameState
 makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
     jal <- reflect algo
@@ -79,6 +70,7 @@ makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
 
 main :: IO ()
 main = do
+    -- setuo JVM with access to own classes
     r <- Runfiles.create
     let jarPath = Runfiles.rlocation r "bridget_ui_ws/jar_deploy.jar"
         jvmArgs = [ "-Djava.class.path=" <> fromString jarPath ]
@@ -89,17 +81,17 @@ main = do
                 } 
             |]
 
-
+        -- backend server for bridget UI
         liftIO $ scotty 3000 $ do
             get "/" $ do
-                html "<h1>Welcome To bridget ui!</h1>"
+                html $ "<h1>Welcome To bridget UI backend!</h1>" <>
+                       "<p>try browsing /move/L 23 0 7 to place a block.</p>" <> 
+                       "<p>(piece type (T/L/Z/O), rotation index (0-23), x (0-7), y (0-7))</p>"
 
             get "/move/:mvstr" $ do
                 mvstr <- pathParam "mvstr"
-                liftIO $ putStrLn ("command: " <> mvstr)
+                liftIO $ putStrLn ("haskell got command: " <> mvstr)
 
                 gs <- makeMove (DT.pack "MINIMAX") (DT.pack mvstr)
 
                 json gs
-
-    -- The `scotty` function runs indefinitely.
