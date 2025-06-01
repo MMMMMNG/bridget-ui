@@ -11,9 +11,9 @@ import qualified Bazel.Runfiles as Runfiles
 import qualified Data.Text as DT
 import qualified Data.Text.IO as DTIO
 import Foreign.JNI (showException, withJVM, runInAttachedThread)
+import Foreign.JNI.Types
 import Language.Java.Inline
-import Language.Java (reflect)
-import Language.Java (reify)
+import Language.Java (reify, reflect, Interpretation, Reify, Reflect)
 
 import Web.Scotty
 import qualified Data.Text.Lazy as TL
@@ -26,6 +26,25 @@ data GameState = GameState
   , winner      :: DT.Text
   , board       :: [[[Int]]]
   } deriving (Show, Eq)
+
+withStatic [d|
+    instance Interpretation GameState where
+        type Interp GameState = 'Class "brgt.GameInterface.GameState"
+    
+    instance Reify GameState where
+        reify jobj = do
+            let method = unsafeDupablePerformIO $ do
+                  klass <- getClass (SClass "brgt.GameInterface.GameState")
+                  m <- getMethodID klass "isGameOver"
+                         (methodSignature [] (SPrim "boolean"))
+                  deleteLocalRef klass
+                  return m
+            go <- callBooleanMethod jobj method []
+            pure $ GameState {gameOver = go, moveInvalid = False, winner = DT.empty, board = [[[1]]]}
+    
+    instance Reflect GameState where
+        reflect = new
+    |]
 
 makeMove :: DT.Text -> DT.Text -> ActionM GameState
 makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
