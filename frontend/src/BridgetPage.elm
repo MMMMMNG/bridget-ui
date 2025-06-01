@@ -68,6 +68,7 @@ type alias Model =
     , gameState : Maybe GameState
     , showInvalid : Bool
     , inventory : Inventory
+    , pieceSelectDisabled : Bool
     }
 
 type Msg
@@ -121,6 +122,7 @@ init _ =
       , gameState = Nothing
       , showInvalid = showInvalidInit
       , inventory = initialInventory
+      , pieceSelectDisabled = False
       }
     , Task.perform
         (\vp -> WindowResize vp.scene.width vp.scene.height)
@@ -215,7 +217,7 @@ update msg model =
                         LShape -> (Rotations.lBlockRotations, 24)
                         TShape -> (Rotations.tBlockRotations, 12)
                         ZShape -> (Rotations.zBlockRotations, 12)
-                        OShape -> (Rotations.oBlockRotations, 2)
+                        OShape -> (Rotations.oBlockRotations, 3)
                 newIndex =
                     let
                         idx = model.pieceRotIndex + dir
@@ -300,6 +302,83 @@ update msg model =
             let
                 newGameState = Just { gs | board = List.map identity gs.board }
                 showInvalid = gs.moveInvalid
+                -- Helper to get next available piece type
+                nextAvailablePiece : Inventory -> PieceType -> PieceType
+                nextAvailablePiece inv current =
+                    let
+                        order = [ LShape, TShape, ZShape, OShape ]
+
+                        dropWhile : (a -> Bool) -> List a -> List a
+                        dropWhile pred lst =
+                            case lst of
+                                [] -> []
+                                x :: xs ->
+                                    if pred x then dropWhile pred xs else lst
+
+                        takeWhile : (a -> Bool) -> List a -> List a
+                        takeWhile pred lst =
+                            case lst of
+                                [] -> []
+                                x :: xs ->
+                                    if pred x then x :: takeWhile pred xs else []
+
+                        rotated =
+                            case dropWhile ((/=) current) order of
+                                [] -> order
+                                (_ :: xs) -> xs ++ takeWhile ((/=) current) order
+
+                        findAvailableHelper lst =
+                            case lst of
+                                [] ->
+                                    current
+                                p :: ps ->
+                                    let
+                                        count =
+                                            case p of
+                                                LShape -> inv.l
+                                                TShape -> inv.t
+                                                ZShape -> inv.z
+                                                OShape -> inv.o
+                                    in
+                                    if count > 0 then p else findAvailableHelper ps
+                    in
+                    if
+                        (case current of
+                            LShape -> inv.l
+                            TShape -> inv.t
+                            ZShape -> inv.z
+                            OShape -> inv.o
+                        ) > 0
+                    then current
+                    else findAvailableHelper rotated
+
+                updatedInventory =
+                    if not gs.moveInvalid then
+                        case model.inventory of
+                            { l, z, t, o } ->
+                                case model.pieceType of
+                                    LShape ->
+                                        { l = max 0 (l - 1), z = z, t = t, o = o }
+                                    ZShape ->
+                                        { l = l, z = max 0 (z - 1), t = t, o = o }
+                                    TShape ->
+                                        { l = l, z = z, t = max 0 (t - 1), o = o }
+                                    OShape ->
+                                        { l = l, z = z, t = t, o = max 0 (o - 1) }
+                    else
+                        model.inventory
+
+                -- After inventory update, pick next available piece if current is 0
+                nextPieceType =
+                    if not gs.moveInvalid then
+                        nextAvailablePiece updatedInventory model.pieceType
+                    else
+                        model.pieceType
+
+                -- Disable piece select if all are 0
+                pieceSelectDisabled =
+                    updatedInventory.l == 0 && updatedInventory.t == 0 && updatedInventory.z == 0 && updatedInventory.o == 0
+
                 cmd =
                     if showInvalid then
                         Process.sleep (2 * 1000)
@@ -307,7 +386,13 @@ update msg model =
                     else
                         Cmd.none
             in
-            ( { model | gameState = newGameState, showInvalid = showInvalid }
+            ( { model
+                | gameState = newGameState
+                , showInvalid = showInvalid
+                , inventory = updatedInventory
+                , pieceType = nextPieceType
+                , pieceSelectDisabled = pieceSelectDisabled
+              }
             , cmd
             )
 
@@ -328,36 +413,50 @@ update msg model =
 
         SelectPieceType ptype ->
             let
-                newRotIndex = 0
-                cubeOffsets = getCubeOffsets ptype newRotIndex
-                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-
-                minX = 0 - minDx
-                maxX = boardSize - 1 - maxDx
-                minY = 0 - minDy
-                maxY = boardSize - 1 - maxDy
-                minZ = 0 - minDz
-                maxZ = boardHeight - 1 - maxDz
-
-                newX = clamp minX maxX model.pieceX
-                newY = clamp minY maxY model.pieceY
-                newZ = clamp minZ maxZ model.pieceZ
+                pieceAvailable =
+                    case ptype of
+                        LShape -> model.inventory.l > 0
+                        TShape -> model.inventory.t > 0
+                        ZShape -> model.inventory.z > 0
+                        OShape -> model.inventory.o > 0
             in
-            ( { model
-                | pieceType = ptype
-                , pieceRotIndex = newRotIndex
-                , pieceX = newX
-                , pieceY = newY
-                , pieceZ = newZ
-              }
-            , Cmd.none
-            )
+            if model.pieceSelectDisabled then
+                (model, Cmd.none)
+            else
+                let
+                    newRotIndex = 0
+                    cubeOffsets = getCubeOffsets ptype newRotIndex
+                    minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                    maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                    minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                    maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                    minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+                    maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
 
+                    minX = 0 - minDx
+                    maxX = boardSize - 1 - maxDx
+                    minY = 0 - minDy
+                    maxY = boardSize - 1 - maxDy
+                    minZ = 0 - minDz
+                    maxZ = boardHeight - 1 - maxDz
+
+                    newX = clamp minX maxX model.pieceX
+                    newY = clamp minY maxY model.pieceY
+                    newZ = clamp minZ maxZ model.pieceZ
+                in
+                if pieceAvailable then
+                    ( { model
+                        | pieceType = ptype
+                        , pieceRotIndex = newRotIndex
+                        , pieceX = newX
+                        , pieceY = newY
+                        , pieceZ = newZ
+                      }
+                    , Cmd.none
+                    )
+                else
+                    (model, Cmd.none)
+        
 
 -- VIEW
 
@@ -655,7 +754,6 @@ view model =
                 centerColor = Color.purple
                 size = 16
                 offset = 24
-                
                 minX = List.minimum (List.map .x miniOffsets) |> Maybe.withDefault 0
                 minY = List.minimum (List.map .y miniOffsets) |> Maybe.withDefault 0
                 maxX = List.maximum (List.map .x miniOffsets) |> Maybe.withDefault 0
@@ -663,17 +761,26 @@ view model =
                 widthVal = maxX - minX + 1
                 heightVal = maxY - minY + 1
                 count = pieceCount pieceType
+                isDisabled = count == 0 || model.pieceSelectDisabled
             in
             Html.div
-                [ Html.Attributes.style "position" "absolute"
-                , Html.Attributes.style "left" (String.fromFloat left ++ "px")
-                , Html.Attributes.style "top" (String.fromFloat top ++ "px")
-                , Html.Attributes.style "width" (String.fromInt (widthVal * size + 2 * offset + 48) ++ "px")
-                , Html.Attributes.style "height" (String.fromInt (heightVal * size + 2 * offset + 24) ++ "px")
-                , Html.Attributes.style "z-index" "20"
-                , Html.Attributes.style "display" "flex"
-                , Html.Attributes.style "align-items" "center"
-                ]
+                ([ Html.Attributes.style "position" "absolute"
+                 , Html.Attributes.style "left" (String.fromFloat left ++ "px")
+                 , Html.Attributes.style "top" (String.fromFloat top ++ "px")
+                 , Html.Attributes.style "width" (String.fromInt (widthVal * size + 2 * offset + 48) ++ "px")
+                 , Html.Attributes.style "height" (String.fromInt (heightVal * size + 2 * offset + 24) ++ "px")
+                 , Html.Attributes.style "z-index" "20"
+                 , Html.Attributes.style "display" "flex"
+                 , Html.Attributes.style "align-items" "center"
+                 ]
+                 ++ (if isDisabled then
+                        [ Html.Attributes.style "opacity" "0.4"
+                        , Html.Attributes.style "pointer-events" "none"
+                        ]
+                    else
+                        []
+                    )
+                )
                 [ Html.div
                     [ Html.Attributes.style "font-size" "28px"
                     , Html.Attributes.style "font-weight" "bold"
@@ -683,43 +790,42 @@ view model =
                     , Html.Attributes.style "text-align" "right"
                     ]
                     [ Html.text ("x " ++ String.fromInt count) ]
-                , Html.map (\_ -> SelectPieceType pieceType)
-                    (Svg.svg
-                        [ Svg.Attributes.width (String.fromInt (widthVal * size + 2 * offset))
-                        , Svg.Attributes.height (String.fromInt (heightVal * size + 2 * offset))
-                        , Html.Attributes.style "cursor" "pointer"
-                        , Html.Events.onClick (SelectPieceType pieceType)
-                        ]
-                        (List.indexedMap
-                            (\i p ->
-                                let
-                                    xVal = (p.x - minX) * size + offset
-                                    yVal = (p.y - minY) * size + offset
-                                    fillVal = if i == 0 then "purple" else
-                                        case pieceType of
-                                            OShape -> "yellow"
-                                            TShape -> "red"
-                                            ZShape -> "green"
-                                            LShape -> "orange"
-                                in
-                                Svg.rect
-                                    [ Svg.Attributes.x (String.fromInt xVal)
-                                    , Svg.Attributes.y (String.fromInt yVal)
-                                    , Svg.Attributes.width (String.fromInt size)
-                                    , Svg.Attributes.height (String.fromInt size)
-                                    , Svg.Attributes.fill fillVal
-                                    , Svg.Attributes.stroke "#333"
-                                    , Svg.Attributes.strokeWidth "2"
-                                    , Svg.Attributes.rx "4"
-                                    , Svg.Attributes.ry "4"
-                                    ]
-                                    []
-                            )
-                            miniOffsets
+                , Svg.svg
+                    ([ Svg.Attributes.width (String.fromInt (widthVal * size + 2 * offset))
+                     , Svg.Attributes.height (String.fromInt (heightVal * size + 2 * offset))
+                     , Html.Attributes.style "cursor" (if isDisabled then "not-allowed" else "pointer")
+                     , Html.Events.onClick (SelectPieceType pieceType)
+                     ]
+                     ++ (if isDisabled then [ Html.Attributes.disabled True ] else [])
+                    )
+                    (List.indexedMap
+                        (\i p ->
+                            let
+                                xVal = (p.x - minX) * size + offset
+                                yVal = (p.y - minY) * size + offset
+                                fillVal = if i == 0 then "purple" else
+                                    case pieceType of
+                                        OShape -> "yellow"
+                                        TShape -> "red"
+                                        ZShape -> "green"
+                                        LShape -> "orange"
+                            in
+                            Svg.rect
+                                [ Svg.Attributes.x (String.fromInt xVal)
+                                , Svg.Attributes.y (String.fromInt yVal)
+                                , Svg.Attributes.width (String.fromInt size)
+                                , Svg.Attributes.height (String.fromInt size)
+                                , Svg.Attributes.fill fillVal
+                                , Svg.Attributes.stroke "#333"
+                                , Svg.Attributes.strokeWidth "2"
+                                , Svg.Attributes.rx "4"
+                                , Svg.Attributes.ry "4"
+                                ]
+                                []
                         )
+                        miniOffsets
                     )
                 ]
-
         -- List of shapes and their vertical positions
         shapeSvgs : List (Html Msg)
         shapeSvgs =
