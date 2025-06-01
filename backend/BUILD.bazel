@@ -38,6 +38,7 @@ haskell_binary(
         "@stackage//:base",
         "@stackage//:text",
         "@stackage//:scotty",      #web server
+        "@stackage//:wai-cors",
         "@stackage//:aeson",       #json
         "@stackage//:linear-base", #linear types
     ] + java_deps,

@@ -4,6 +4,13 @@ Using benajakuhn's [bridget implementation](https://github.com/benajakuhn/wodsBr
 
 The bridge between elm and java is a haskell webserver (scotty) using [inline-java](https://github.com/tweag/inline-java)
 
+## Download Source
+...including submodule:
+```shell
+git clone --recurse-submodules https://github.com/MMMMMNG/bridget-ui.git
+cd bridget-ui/
+```
+
 ## Running the full app:
 ```shell
 cd compose/prod
@@ -30,3 +37,9 @@ and if there are no compiler errors, you can run the compiled polyglot app:
 ```shell
 bazel-bin/bridget_backend
 ```
+### Update stackage_snapshot.json
+This is probably not necessary but it seems like it version-locks transitive deps, which is very good for reproducibility.
+```shell
+bazel run @stackage-unpinned//:pin
+```
+see also: [haskell.build](https://release.api.haskell.build/haskell/cabal#stack_snapshot)

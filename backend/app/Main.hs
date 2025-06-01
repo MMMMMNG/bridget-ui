@@ -16,6 +16,7 @@ import Foreign.JNI (showException, runInAttachedThread)
 import Language.Java
 import Language.Java.Inline
 import Web.Scotty
+import Network.Wai.Middleware.Cors
 import Control.Concurrent (runInBoundThread)
 import Data.Aeson (ToJSON(..), object, (.=))
 
@@ -83,6 +84,7 @@ main = do
 
         -- backend server for bridget UI
         liftIO $ scotty 3000 $ do
+            middleware simpleCors
             get "/" $ do
                 html $ "<h1>Welcome To bridget UI backend!</h1>" <>
                        "<p>try browsing /move/L 23 0 7 to place a block.</p>" <> 

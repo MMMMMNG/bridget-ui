@@ -58,6 +58,7 @@ load("@rules_haskell//haskell:cabal.bzl", "stack_snapshot")
 stack_snapshot(
     name = "stackage",
     packages = [
+        "wai-cors-0.2.7",
         "warp-3.3.22",
         "wai-3.2.4",
         "wai-extra-3.1.14",
