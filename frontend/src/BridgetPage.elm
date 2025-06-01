@@ -62,10 +62,16 @@ type Msg
     | RotatePiece Axis Int
     | SwitchPieceType
     | PlacePiece
+    | PlacePieceResult GameState
 
 type Axis = X | Y | Z 
 
-
+type alias GameState =
+    { gameOver    : Bool
+    , moveInvalid : Bool
+    , winner      : String
+    , board       : List (List (List Int))
+    }
 
 -- INIT
 
