@@ -8,3 +8,11 @@ services:
       - ../../backend:/app/
     ports:
       - "3000:3000"
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../compose/dev/dev-frontend.Dockerfile
+    volumes:
+      - ../../frontend:/app/
+    ports:
+      - "8000:8000"
