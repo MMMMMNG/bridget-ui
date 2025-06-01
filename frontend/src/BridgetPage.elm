@@ -21,7 +21,7 @@ import Task
 import Viewpoint3d
 import Html.Events
 import Rotations
-import Svg exposing (Svg)
+import Svg
 import Svg.Attributes
 
 -- MODEL
@@ -36,6 +36,13 @@ type PieceType
 type Player
     = Player1
     | Player2
+
+type alias Inventory =
+    { l : Int
+    , z : Int
+    , t : Int
+    , o : Int
+    }
 
 type alias Model =
     { azimuth : Float
@@ -53,6 +60,7 @@ type alias Model =
     , currentPlayer : Player
     , gameState : Maybe GameState
     , showInvalid : Bool
+    , inventory : Inventory
     }
 
 type Msg
@@ -67,6 +75,7 @@ type Msg
     | SwitchPieceType
     | PlacePiece
     | PlacePieceResult GameState
+    | SelectPieceType PieceType
 
 type Axis = X | Y | Z 
 
@@ -99,6 +108,8 @@ init _ =
                 True
             else
                 False
+        initialInventory =
+            { l = 4, z = 4, t = 4, o = 2 }
     in
     ( { azimuth = 45
       , elevation = 30
@@ -115,6 +126,7 @@ init _ =
       , currentPlayer = Player1
       , gameState = Just testGameState
       , showInvalid = showInvalidInit
+      , inventory = initialInventory
       }
     , Task.perform
         (\vp -> WindowResize vp.scene.width vp.scene.height)
@@ -299,6 +311,38 @@ update msg model =
             in
             ( { model | gameState = newGameState, showInvalid = showInvalid }, Cmd.none )
 
+        SelectPieceType ptype ->
+            let
+                newRotIndex = 0
+                cubeOffsets = getCubeOffsets ptype newRotIndex
+                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+
+                minX = 0 - minDx
+                maxX = boardSize - 1 - maxDx
+                minY = 0 - minDy
+                maxY = boardSize - 1 - maxDy
+                minZ = 0 - minDz
+                maxZ = boardHeight - 1 - maxDz
+
+                newX = clamp minX maxX model.pieceX
+                newY = clamp minY maxY model.pieceY
+                newZ = clamp minZ maxZ model.pieceZ
+            in
+            ( { model
+                | pieceType = ptype
+                , pieceRotIndex = newRotIndex
+                , pieceX = newX
+                , pieceY = newY
+                , pieceZ = newZ
+              }
+            , Cmd.none
+            )
+
 
 
 -- VIEW
@@ -408,8 +452,8 @@ keyToMsg json =
         Ok "ArrowRight"  -> MovePiece 0 1
         Ok "ArrowUp"  -> MovePiece -1 0
         Ok "ArrowDown" -> MovePiece 1 0
-        Ok "a"          -> RotatePiece Z 1
-        Ok "d"          -> RotatePiece Z -1
+        Ok "d"          -> RotatePiece Z 1
+        Ok "a"          -> RotatePiece Z -1
         _               -> NoOp
 
 
@@ -510,8 +554,15 @@ view model =
         rotIndexText =
             "Rotation: " ++ String.fromInt rotationIndexFromElm
 
-        -- Helper to draw a mini shape at a given position
-        miniShape : PieceType -> (Float, Float) -> Html msg
+        pieceCount : PieceType -> Int
+        pieceCount pt =
+            case pt of
+                LShape -> model.inventory.l
+                ZShape -> model.inventory.z
+                TShape -> model.inventory.t
+                OShape -> model.inventory.o
+
+        miniShape : PieceType -> (Float, Float) -> Html Msg
         miniShape pieceType (left, top) =
             let
                 miniOffsets = getCubeOffsets pieceType 0
@@ -531,45 +582,66 @@ view model =
                 maxY = List.maximum (List.map .y miniOffsets) |> Maybe.withDefault 0
                 widthVal = maxX - minX + 1
                 heightVal = maxY - minY + 1
+                count = pieceCount pieceType
             in
-            Svg.svg
-                [ Svg.Attributes.width (String.fromInt (widthVal * size + 2 * offset))
-                , Svg.Attributes.height (String.fromInt (heightVal * size + 2 * offset))
-                , Html.Attributes.style "position" "absolute"
+            Html.div
+                [ Html.Attributes.style "position" "absolute"
                 , Html.Attributes.style "left" (String.fromFloat left ++ "px")
                 , Html.Attributes.style "top" (String.fromFloat top ++ "px")
+                , Html.Attributes.style "width" (String.fromInt (widthVal * size + 2 * offset + 48) ++ "px")
+                , Html.Attributes.style "height" (String.fromInt (heightVal * size + 2 * offset + 24) ++ "px")
                 , Html.Attributes.style "z-index" "20"
+                , Html.Attributes.style "display" "flex"
+                , Html.Attributes.style "align-items" "center"
                 ]
-                (List.indexedMap
-                    (\i p ->
-                        let
-                            xVal = (p.x - minX) * size + offset
-                            yVal = (p.y - minY) * size + offset
-                            fillVal = if i == 0 then "purple" else
-                                case pieceType of
-                                    OShape -> "yellow"
-                                    TShape -> "red"
-                                    ZShape -> "green"
-                                    LShape -> "orange"
-                        in
-                        Svg.rect
-                            [ Svg.Attributes.x (String.fromInt xVal)
-                            , Svg.Attributes.y (String.fromInt yVal)
-                            , Svg.Attributes.width (String.fromInt size)
-                            , Svg.Attributes.height (String.fromInt size)
-                            , Svg.Attributes.fill fillVal
-                            , Svg.Attributes.stroke "#333"
-                            , Svg.Attributes.strokeWidth "2"
-                            , Svg.Attributes.rx "4"
-                            , Svg.Attributes.ry "4"
-                            ]
-                            []
+                [ Html.div
+                    [ Html.Attributes.style "font-size" "28px"
+                    , Html.Attributes.style "font-weight" "bold"
+                    , Html.Attributes.style "color" "#333"
+                    , Html.Attributes.style "margin-right" "12px"
+                    , Html.Attributes.style "width" "40px"
+                    , Html.Attributes.style "text-align" "right"
+                    ]
+                    [ Html.text ("x " ++ String.fromInt count) ]
+                , Html.map (\_ -> SelectPieceType pieceType)
+                    (Svg.svg
+                        [ Svg.Attributes.width (String.fromInt (widthVal * size + 2 * offset))
+                        , Svg.Attributes.height (String.fromInt (heightVal * size + 2 * offset))
+                        , Html.Attributes.style "cursor" "pointer"
+                        , Html.Events.onClick (SelectPieceType pieceType)
+                        ]
+                        (List.indexedMap
+                            (\i p ->
+                                let
+                                    xVal = (p.x - minX) * size + offset
+                                    yVal = (p.y - minY) * size + offset
+                                    fillVal = if i == 0 then "purple" else
+                                        case pieceType of
+                                            OShape -> "yellow"
+                                            TShape -> "red"
+                                            ZShape -> "green"
+                                            LShape -> "orange"
+                                in
+                                Svg.rect
+                                    [ Svg.Attributes.x (String.fromInt xVal)
+                                    , Svg.Attributes.y (String.fromInt yVal)
+                                    , Svg.Attributes.width (String.fromInt size)
+                                    , Svg.Attributes.height (String.fromInt size)
+                                    , Svg.Attributes.fill fillVal
+                                    , Svg.Attributes.stroke "#333"
+                                    , Svg.Attributes.strokeWidth "2"
+                                    , Svg.Attributes.rx "4"
+                                    , Svg.Attributes.ry "4"
+                                    ]
+                                    []
+                            )
+                            miniOffsets
+                        )
                     )
-                    miniOffsets
-                )
+                ]
 
         -- List of shapes and their vertical positions
-        shapeSvgs : List (Html msg)
+        shapeSvgs : List (Html Msg)
         shapeSvgs =
             [ (OShape, 120)
             , (ZShape, 180)
@@ -578,7 +650,6 @@ view model =
             ]
             |> List.map (\(ptype, top) -> miniShape ptype (20, toFloat top))
 
-        -- ...existing code...
     in
     Html.div
         [ Html.Attributes.style "position" "fixed"
@@ -613,15 +684,8 @@ view model =
                 []
             )
             ++
-            [ Html.button
-                [ Html.Attributes.style "position" "absolute"
-                , Html.Attributes.style "z-index" "10"
-                , Html.Attributes.style "top" "20px"
-                , Html.Attributes.style "left" "20px"
-                , Html.Events.onClick SwitchPieceType
-                ]
-                [ Html.text "Switch Piece" ]
-            , Html.button
+            [
+            Html.button
                 [ Html.Attributes.style "position" "absolute"
                 , Html.Attributes.style "z-index" "10"
                 , Html.Attributes.style "top" "50%"
@@ -640,7 +704,7 @@ view model =
             , Html.div
                 [ Html.Attributes.style "position" "absolute"
                 , Html.Attributes.style "z-index" "10"
-                , Html.Attributes.style "top" "60px"
+                , Html.Attributes.style "top" "20px"
                 , Html.Attributes.style "left" "20px"
                 , Html.Attributes.style "background" "rgba(255,255,255,0.8)"
                 , Html.Attributes.style "padding" "8px"
