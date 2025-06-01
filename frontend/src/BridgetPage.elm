@@ -49,6 +49,8 @@ type alias Model =
     , pieceZ : Int
     , pieceType : PieceType
     , currentPlayer : Player
+    , gameState : Maybe GameState
+    , showInvalid : Bool
     }
 
 type Msg
@@ -78,6 +80,24 @@ type alias GameState =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
+    let
+        testGameState : GameState
+        testGameState =
+            { gameOver = False
+            , moveInvalid = True
+            , winner = "Player 1"
+            , board =
+                [ [ [ 0, 0, 0 ], [ 0, 2, 0 ], [ 0, 0, 0 ] ]
+                , [ [ 0, 1, 0 ], [ 0, 2, 0 ], [ 0, 0, 0 ] ]
+                , [ [ 0, 0, 0 ], [ 0, 0, 0 ], [ 0, 0, 0 ] ]
+                ]
+            }
+        showInvalidInit =
+            if testGameState.moveInvalid then
+                True
+            else
+                False
+    in
     ( { azimuth = 45
       , elevation = 30
       , isMouseDown = False
@@ -91,6 +111,8 @@ init _ =
       , pieceZ = 0
       , pieceType = LShape
       , currentPlayer = Player1
+      , gameState = Just testGameState
+      , showInvalid = showInvalidInit
       }
     , Task.perform
         (\vp -> WindowResize vp.scene.width vp.scene.height)
@@ -265,14 +287,15 @@ update msg model =
             )
 
         PlacePiece ->
+            -- ...your logic for sending the move to the backend...
+            ( model, Cmd.none )
+
+        PlacePieceResult gamestate ->
             let
-                nextPlayer =
-                    case model.currentPlayer of
-                        Player1 -> Player2
-                        Player2 -> Player1
+                showInvalid = gamestate.moveInvalid
+                newGameState = Just gamestate
             in
-            ( { model | currentPlayer = nextPlayer }, Cmd.none )
-        PlacePieceResult gamestate -> (model, Cmd.none)
+            ( { model | gameState = newGameState, showInvalid = showInvalid }, Cmd.none )
 
 
 
@@ -415,8 +438,45 @@ main =
 view : Model -> Html Msg
 view model =
     let
+        -- Render pieces from the backend board (GameState)
+        boardEntities =
+            case model.gameState of
+                Just gs ->
+                    let
+                        -- Move BoardPos type alias to the top-level if needed, or just use records inline
+                        flatten =
+                            List.concatMap (\(z, plane) ->
+                                List.concatMap (\(y, row) ->
+                                    List.indexedMap (\x v -> { x = x, y = y, z = z, v = v }) row
+                                ) (List.indexedMap Tuple.pair plane)
+                            ) (List.indexedMap Tuple.pair gs.board)
+
+                        pieceEntities =
+                            List.filter (\pos -> pos.v /= 0) flatten
+                                |> List.map (\pos ->
+                                    let
+                                        color =
+                                            case pos.v of
+                                                1 -> Color.black
+                                                2 -> Color.white
+                                                _ -> Color.gray
+                                        cx = toFloat pos.x - (toFloat boardSize - 1) / 2
+                                        cy = toFloat pos.y - (toFloat boardSize - 1) / 2
+                                        cz = toFloat pos.z - (toFloat boardHeight - 1) / 2
+                                    in
+                                    Block3d.centeredOn
+                                        (Frame3d.atPoint (Point3d.meters cx cy cz))
+                                        ( Length.meters 1, Length.meters 1, Length.meters 1 )
+                                        |> Scene3d.blockWithShadow (Material.matte color)
+                                )
+                    in
+                    pieceEntities
+
+                Nothing ->
+                    []
+
         entities =
-            chessboard ++ [ gamePiece model ] ++ compassEntities
+            chessboard ++ boardEntities ++ [ gamePiece model ] ++ compassEntities
 
         cubeOffsets = getCubeOffsets model.pieceType model.pieceRotIndex
         centerBlock =
@@ -447,13 +507,6 @@ view model =
 
         rotIndexText =
             "Rotation: " ++ String.fromInt rotationIndexFromElm
-
-        playerText =
-            "Player: "
-                ++ (case model.currentPlayer of
-                        Player1 -> "1"
-                        Player2 -> "2"
-                   )
     in
     Html.div
         [ Html.Attributes.style "position" "fixed"
@@ -466,59 +519,107 @@ view model =
         , Html.Attributes.style "overflow" "hidden"
         , Html.Attributes.style "user-select" "none"
         ]
-        [ Html.button
-            [ Html.Attributes.style "position" "absolute"
-            , Html.Attributes.style "z-index" "10"
-            , Html.Attributes.style "top" "20px"
-            , Html.Attributes.style "left" "20px"
-            , Html.Events.onClick SwitchPieceType
+        (
+            (if model.showInvalid then
+                [ Html.div
+                    [ Html.Attributes.style "position" "absolute"
+                    , Html.Attributes.style "top" "0"
+                    , Html.Attributes.style "left" "0"
+                    , Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "background" "#ffcccc"
+                    , Html.Attributes.style "color" "#a00"
+                    , Html.Attributes.style "font-size" "20px"
+                    , Html.Attributes.style "text-align" "center"
+                    , Html.Attributes.style "padding" "12px"
+                    , Html.Attributes.style "z-index" "100"
+                    ]
+                    [ Html.text "Move invalid, try again!" ]
+                ]
+              else
+                []
+            )
+            ++
+            [ Html.button
+                [ Html.Attributes.style "position" "absolute"
+                , Html.Attributes.style "z-index" "10"
+                , Html.Attributes.style "top" "20px"
+                , Html.Attributes.style "left" "20px"
+                , Html.Events.onClick SwitchPieceType
+                ]
+                [ Html.text "Switch Piece" ]
+            , Html.button
+                [ Html.Attributes.style "position" "absolute"
+                , Html.Attributes.style "z-index" "10"
+                , Html.Attributes.style "top" "50%"
+                , Html.Attributes.style "right" "20px"
+                , Html.Attributes.style "transform" "translateY(-50%)"
+                , Html.Attributes.style "padding" "16px 24px"
+                , Html.Attributes.style "font-size" "18px"
+                , Html.Attributes.style "background" "#6c47a6"
+                , Html.Attributes.style "color" "white"
+                , Html.Attributes.style "border" "none"
+                , Html.Attributes.style "border-radius" "8px"
+                , Html.Attributes.style "box-shadow" "0 2px 8px rgba(0,0,0,0.15)"
+                , Html.Events.onClick PlacePiece
+                ]
+                [ Html.text "Place" ]
+            , Html.div
+                [ Html.Attributes.style "position" "absolute"
+                , Html.Attributes.style "z-index" "10"
+                , Html.Attributes.style "top" "60px"
+                , Html.Attributes.style "left" "20px"
+                , Html.Attributes.style "background" "rgba(255,255,255,0.8)"
+                , Html.Attributes.style "padding" "8px"
+                , Html.Attributes.style "border-radius" "6px"
+                , Html.Attributes.style "font-family" "monospace"
+                ]
+                [ Html.text ("Center: " ++ centerCoords ++ " | " ++ rotIndexText)]
+            , Scene3d.sunny
+                { camera = createCamera model
+                , entities = entities
+                , background = Scene3d.backgroundColor (Color.rgb255 232 206 235)
+                , clipDepth = Length.meters 0.1
+                , dimensions =
+                    ( Pixels.pixels (round model.windowWidth)
+                    , Pixels.pixels (round model.windowHeight)
+                    )
+                , shadows = True
+                , sunlightDirection = Direction3d.xyZ (Angle.degrees -120) (Angle.degrees -45)
+                , upDirection = Direction3d.positiveZ
+                }
+                |> Html.map (\_ -> NoOp)
+            , (case model.gameState of
+                Just gs ->
+                    if gs.gameOver then
+                        Html.div
+                            [ Html.Attributes.style "position" "fixed"
+                            , Html.Attributes.style "top" "0"
+                            , Html.Attributes.style "left" "0"
+                            , Html.Attributes.style "width" "100vw"
+                            , Html.Attributes.style "height" "100vh"
+                            , Html.Attributes.style "background" "rgba(0,0,0,0.5)"
+                            , Html.Attributes.style "display" "flex"
+                            , Html.Attributes.style "align-items" "center"
+                            , Html.Attributes.style "justify-content" "center"
+                            , Html.Attributes.style "z-index" "200"
+                            ]
+                            [ Html.div
+                                [ Html.Attributes.style "background" "white"
+                                , Html.Attributes.style "padding" "40px"
+                                , Html.Attributes.style "border-radius" "16px"
+                                , Html.Attributes.style "font-size" "28px"
+                                , Html.Attributes.style "color" "#222"
+                                , Html.Attributes.style "box-shadow" "0 4px 32px rgba(0,0,0,0.25)"
+                                ]
+                                [ Html.text ("Game Over! Winner is: " ++ gs.winner) ]
+                            ]
+                    else
+                        Html.text ""
+                Nothing ->
+                    Html.text ""
+            )
             ]
-            [ Html.text "Switch Piece" ]
-        , Html.button
-            [ Html.Attributes.style "position" "absolute"
-            , Html.Attributes.style "z-index" "10"
-            , Html.Attributes.style "top" "50%"
-            , Html.Attributes.style "right" "20px"
-            , Html.Attributes.style "transform" "translateY(-50%)"
-            , Html.Attributes.style "padding" "16px 24px"
-            , Html.Attributes.style "font-size" "18px"
-            , Html.Attributes.style "background" "#6c47a6"
-            , Html.Attributes.style "color" "white"
-            , Html.Attributes.style "border" "none"
-            , Html.Attributes.style "border-radius" "8px"
-            , Html.Attributes.style "box-shadow" "0 2px 8px rgba(0,0,0,0.15)"
-            , Html.Events.onClick PlacePiece
-            ]
-            [ Html.text "Place" ]
-        , Html.div
-            [ Html.Attributes.style "position" "absolute"
-            , Html.Attributes.style "z-index" "10"
-            , Html.Attributes.style "top" "60px"
-            , Html.Attributes.style "left" "20px"
-            , Html.Attributes.style "background" "rgba(255,255,255,0.8)"
-            , Html.Attributes.style "padding" "8px"
-            , Html.Attributes.style "border-radius" "6px"
-            , Html.Attributes.style "font-family" "monospace"
-            ]
-            [ Html.div []
-                [ Html.text playerText ]
-            , Html.text ("Center: " ++ centerCoords ++ " | " ++ rotIndexText)
-            ]
-        , Scene3d.sunny
-            { camera = createCamera model
-            , entities = entities
-            , background = Scene3d.backgroundColor (Color.rgb255 232 206 235)
-            , clipDepth = Length.meters 0.1
-            , dimensions =
-                ( Pixels.pixels (round model.windowWidth)
-                , Pixels.pixels (round model.windowHeight)
-                )
-            , shadows = True
-            , sunlightDirection = Direction3d.xyZ (Angle.degrees -120) (Angle.degrees -45)
-            , upDirection = Direction3d.positiveZ
-            }
-            |> Html.map (\_ -> NoOp)
-        ]
+        )
 
 gamePiece : Model -> Scene3d.Entity ()
 gamePiece model =
