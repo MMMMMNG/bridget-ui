@@ -35,8 +35,8 @@ data GameState = GameState
   { gameOver    :: Bool
   , moveInvalid :: Bool
   , winner      :: DT.Text
-  , board       :: [[[Int]]]
-  } deriving (Show, Eq)
+  , board       :: DT.Text --right, why bother parsing it when it has to be serialized anyway? 
+  } deriving (Show, Eq)    -- ...putting the "lazy" back in "lazy string" *ba dum ts* (and yes, I know it's strict)
 
 -- | Reads a Java GameState object and converts it to a Haskell GameState record.
 readGameState :: J ('Class "brgt.GameInterface$GameState") -> IO GameState
@@ -52,14 +52,14 @@ readGameState jGameState = do
   jWinner <- [java| $jGameState.getWinner() |]
   winnerHaskell <- reify (jWinner :: J ('Class "java.lang.String") )
 
-  --jBoard <- [java| $jGameState.getBoard() |]
-  --boardHaskell <- reify jBoard --(jBoard :: J ('Array ('Array ('Array ('Prim "int")))))
+  jBoard <- [java| $jGameState.uglyWorkAroundBoardGet() |]
+  boardHaskell <- reify (jBoard :: J ('Class "java.lang.String") )
 
   pure GameState
     { gameOver    = gameOverHaskell
     , moveInvalid = moveInvalidHaskell
     , winner      = winnerHaskell
-    , board       = [[[1]]] --boardHaskell
+    , board       = boardHaskell
     }
 
 instance ToJSON GameState where
