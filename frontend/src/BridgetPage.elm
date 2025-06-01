@@ -272,6 +272,7 @@ update msg model =
                         Player2 -> Player1
             in
             ( { model | currentPlayer = nextPlayer }, Cmd.none )
+        PlacePieceResult gamestate -> (model, Cmd.none)
 
 
 
