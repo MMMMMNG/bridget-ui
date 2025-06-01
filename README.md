@@ -14,19 +14,20 @@ cd bridget-ui/
 ## Running the full app:
 ```shell
 cd compose/prod
-docker compose up
+docker compose up --build
 ```
 Then visit: http://localhost:8000/src/BridgetPage.elm  
 
 
-**NOTE:** The backend image was 10GB+ on my machine.  
-In my opinion that's better than installing 10GB+ worth of [nix](https://nixos.org/) and [bazel](https://bazel.build/) and [haskell](https://www.haskell.org/) dependencies on my PC, though.
+**NOTE:** The backend image was 11GB+ on my machine.  
+In my opinion that's better than installing 11GB+ worth of [nix](https://nixos.org/) and [bazel](https://bazel.build/) and [haskell](https://www.haskell.org/) dependencies on my PC, though.  
+The frontend-image was ~300MB.
 
 ## Development
 start the dev-containers for front- and backend:
 ```shell
 cd compose/dev
-docker compose up -d backend
+docker compose up -d --build
 ```
 Browse to the frontend: http://localhost:8000/src/BridgetPage.elm  
 Now you should be able to develop the frontend. If you need elm tools, get an interactive shell in the frontend container (e.g. exec tab in docker desktop) 

@@ -3,4 +3,10 @@ services:
   backend:
     build:
       context: ../../backend
-#    volumes:
+    ports:
+      - "3000:3000"
+  frontend:
+    build:
+      context: ../../frontend
+    ports:
+      - "8000:8000"

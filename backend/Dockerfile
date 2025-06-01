@@ -9,6 +9,9 @@ RUN nix-channel --update
 #provision shell first (installs nix packages)...
 RUN nix-shell
 
+#also cache the bazel extraction
+RUN nix-shell --pure --run "bazel version"
+
 
 #copy the contents of the backend folder
 COPY . .
