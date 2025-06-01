@@ -97,18 +97,8 @@ type alias GameState =
 init : () -> ( Model, Cmd Msg )
 init _ =
     let
-        testGameState : GameState
-        testGameState =
-            { gameOver = False
-            , moveInvalid = False
-            , winner = "Player 1"
-            , board = [[[1, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[1, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [2, 0, 0]]]
-            }
-        showInvalidInit =
-            if testGameState.moveInvalid then
-                True
-            else
-                False
+        -- testGameState removed
+        showInvalidInit = False
         initialInventory =
             { l = 4, z = 4, t = 4, o = 2 }
     in
@@ -125,7 +115,7 @@ init _ =
       , pieceZ = 0
       , pieceType = LShape
       , currentPlayer = Player1
-      , gameState = Just testGameState
+      , gameState = Nothing
       , showInvalid = showInvalidInit
       , inventory = initialInventory
       }
@@ -303,17 +293,27 @@ update msg model =
         
         PlacePieceHttpResult (Err _) -> (model, Cmd.none)
         PlacePieceHttpResult (Ok Nothing) -> (model, Cmd.none)
-        PlacePieceHttpResult (Ok (Just gs)) -> update (PlacePieceResult gs) model
+        PlacePieceHttpResult (Ok (Just gs)) ->
+            -- Always update gameState after HTTP request
+            let
+                -- Force Elm to treat the new GameState as different, even if structurally equal
+                newGameState = Just { gs | board = List.map identity gs.board }
+            in
+            ( { model | gameState = newGameState, showInvalid = gs.moveInvalid }
+            , Cmd.none
+            )
 
         PlacePiece ->
-            (model, submitMove model.pieceType model.pieceRotIndex model.pieceX model.pieceY)
+            (model, submitMove model.pieceType model.pieceRotIndex model.pieceY model.pieceX)
 
         PlacePieceResult gamestate ->
             let
                 showInvalid = gamestate.moveInvalid
                 newGameState = Just gamestate
             in
-            ( { model | gameState = newGameState, showInvalid = showInvalid }, Cmd.none )
+            ( { model | gameState = newGameState, showInvalid = showInvalid }
+            , Cmd.none
+            )
 
         SelectPieceType ptype ->
             let
@@ -444,19 +444,33 @@ stringDecoderWithDefault defaultValue decoder =
                 Err _ -> D.succeed defaultValue
         )
 
-
 gsDecoder : D.Decoder (Maybe GameState)
 gsDecoder =
-    -- Attempt to decode a single GameState object.
-    -- If the object is not found or has issues, the outer `optional` (map Just, map Nothing) handles it.
+    -- Fix: decode the board field as a string, then decode the JSON string inside it
+    let
+        boardStringDecoder : D.Decoder (List (List (List Int)))
+        boardStringDecoder =
+            D.field "board" D.string
+                |> D.andThen
+                    (\str ->
+                        case D.decodeString (D.list (D.list (D.list D.int))) str of
+                            Ok val -> D.succeed val
+                            Err _ -> D.fail "Could not decode board JSON string"
+                    )
+    in
     D.oneOf
-        [ D.map Just <|
-            D.map4 GameState
-                (D.field "isGameOver" D.bool) -- Corrected from D.string to D.bool based on GameState
-                (D.field "isLastMoveInvalid" D.bool)
-                (D.field "winner" D.string)
-                (D.field "board" (stringDecoderWithDefault [[[1]]] (D.list (D.list (D.list D.int)))))
-        , D.succeed Nothing -- If the field is missing or decoding fails, return Nothing
+        [ D.map4 (\isGameOver isLastMoveInvalid winner board ->
+                Just { gameOver = isGameOver
+                     , moveInvalid = isLastMoveInvalid
+                     , winner = winner
+                     , board = board
+                     }
+            )
+            (D.field "isGameOver" D.bool)
+            (D.field "isLastMoveInvalid" D.bool)
+            (D.field "winner" D.string)
+            boardStringDecoder
+        , D.succeed Nothing
         ]
 
 
@@ -544,43 +558,42 @@ type alias PlacedPiece =
 view : Model -> Html Msg
 view model =
     let
-        -- Instead of rendering by cell value, render by piece logic
+        -- Render the actual board from gameState, not hardcoded pieces
         boardEntities =
             case model.gameState of
                 Just gs ->
                     let
-                        placedPieces : List PlacedPiece
-                        placedPieces =
-                            [ { pieceType = TShape, rotIdx = 1, x = 0, y = 0, z = 0, v = 1 }
-                            , { pieceType = LShape, rotIdx = 0, x = 6, y = 5, z = 0, v = 2 }
-                            ]
-                        pieceEntity piece =
-                            let
-                                color =
-                                    case piece.v of
-                                        1 -> Color.black
-                                        2 -> Color.white
-                                        _ -> Color.gray
-                                pieceCubeOffsets = getCubeOffsets piece.pieceType piece.rotIdx
-                                cubeBlocks =
-                                    List.indexedMap
-                                        (\i p ->
+                        cubes =
+                            List.concatMap (\(y, row) ->
+                                List.concatMap (\(x, col) ->
+                                    List.indexedMap (\z v ->
+                                        if v == 0 then
+                                            Nothing
+                                        else
                                             let
-                                                -- Shift all pieces +1 on y axis
-                                                cx = toFloat (piece.x + p.x) - ((toFloat boardSize - 1) / 2)
-                                                cy = toFloat (piece.y + p.y + 1) - ((toFloat boardSize - 1) / 2)
-                                                cz = toFloat (piece.z + p.z) - ((toFloat boardHeight - 1) / 2)
+                                                color =
+                                                    case v of
+                                                        1 -> Color.black
+                                                        2 -> Color.white
+                                                        3 -> Color.green
+                                                        4 -> Color.red
+                                                        _ -> Color.gray
+                                                cubeEntity =
+                                                    Block3d.centeredOn
+                                                        (Frame3d.atPoint (Point3d.meters cx cy cz))
+                                                        ( Length.meters 1, Length.meters 1, Length.meters 1 )
+                                                        |> Scene3d.blockWithShadow (Material.matte color)
+                                                cx = toFloat x - (toFloat boardSize - 1) / 2
+                                                cy = toFloat y - (toFloat boardSize - 1) / 2
+                                                cz = toFloat z - (toFloat boardHeight - 1) / 2
                                             in
-                                            Block3d.centeredOn
-                                                (Frame3d.atPoint (Point3d.meters cx cy cz))
-                                                ( Length.meters 1, Length.meters 1, Length.meters 1 )
-                                                |> Scene3d.blockWithShadow (Material.matte (if i == 0 then Color.purple else color))
-                                        )
-                                        pieceCubeOffsets
-                            in
-                            Scene3d.group cubeBlocks
+                                            Just (cubeEntity)
+                                    ) col
+                                    |> List.filterMap identity
+                                ) (List.indexedMap Tuple.pair row)
+                            ) (List.indexedMap Tuple.pair gs.board)
                     in
-                    List.map pieceEntity placedPieces
+                    cubes
                 Nothing ->
                     []
         entities =
