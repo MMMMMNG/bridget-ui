@@ -102,11 +102,7 @@ init _ =
             { gameOver = False
             , moveInvalid = False
             , winner = "Player 1"
-            , board =
-                [ [ [ 0, 0, 0 ], [ 0, 2, 0 ], [ 0, 0, 0 ] ]
-                , [ [ 0, 1, 0 ], [ 0, 2, 0 ], [ 0, 0, 0 ] ]
-                , [ [ 0, 0, 0 ], [ 0, 0, 0 ], [ 0, 0, 0 ] ]
-                ]
+            , board = [[[1, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[1, 1, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[1, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [2, 0, 0], [2, 0, 0]]]
             }
         showInvalidInit =
             if testGameState.moveInvalid then
@@ -536,52 +532,63 @@ main =
         , view = view
         }
 
+type alias PlacedPiece =
+    { pieceType : PieceType
+    , rotIdx : Int
+    , x : Int
+    , y : Int
+    , z : Int
+    , v : Int
+    }
+
 view : Model -> Html Msg
 view model =
     let
-        -- Render pieces from the backend board (GameState)
+        -- Instead of rendering by cell value, render by piece logic
         boardEntities =
             case model.gameState of
                 Just gs ->
                     let
-                        -- Move BoardPos type alias to the top-level if needed, or just use records inline
-                        flatten =
-                            List.concatMap (\(z, plane) ->
-                                List.concatMap (\(y, row) ->
-                                    List.indexedMap (\x v -> { x = x, y = y, z = z, v = v }) row
-                                ) (List.indexedMap Tuple.pair plane)
-                            ) (List.indexedMap Tuple.pair gs.board)
-
-                        pieceEntities =
-                            List.filter (\pos -> pos.v /= 0) flatten
-                                |> List.map (\pos ->
-                                    let
-                                        color =
-                                            case pos.v of
-                                                1 -> Color.black
-                                                2 -> Color.white
-                                                _ -> Color.gray
-                                        cx = toFloat pos.x - (toFloat boardSize - 1) / 2
-                                        cy = toFloat pos.y - (toFloat boardSize - 1) / 2
-                                        cz = toFloat pos.z - (toFloat boardHeight - 1) / 2
-                                    in
-                                    Block3d.centeredOn
-                                        (Frame3d.atPoint (Point3d.meters cx cy cz))
-                                        ( Length.meters 1, Length.meters 1, Length.meters 1 )
-                                        |> Scene3d.blockWithShadow (Material.matte color)
-                                )
+                        placedPieces : List PlacedPiece
+                        placedPieces =
+                            [ { pieceType = TShape, rotIdx = 1, x = 0, y = 0, z = 0, v = 1 }
+                            , { pieceType = LShape, rotIdx = 0, x = 6, y = 5, z = 0, v = 2 }
+                            ]
+                        pieceEntity piece =
+                            let
+                                color =
+                                    case piece.v of
+                                        1 -> Color.black
+                                        2 -> Color.white
+                                        _ -> Color.gray
+                                pieceCubeOffsets = getCubeOffsets piece.pieceType piece.rotIdx
+                                cubeBlocks =
+                                    List.indexedMap
+                                        (\i p ->
+                                            let
+                                                -- Shift all pieces +1 on y axis
+                                                cx = toFloat (piece.x + p.x) - ((toFloat boardSize - 1) / 2)
+                                                cy = toFloat (piece.y + p.y + 1) - ((toFloat boardSize - 1) / 2)
+                                                cz = toFloat (piece.z + p.z) - ((toFloat boardHeight - 1) / 2)
+                                            in
+                                            Block3d.centeredOn
+                                                (Frame3d.atPoint (Point3d.meters cx cy cz))
+                                                ( Length.meters 1, Length.meters 1, Length.meters 1 )
+                                                |> Scene3d.blockWithShadow (Material.matte (if i == 0 then Color.purple else color))
+                                        )
+                                        pieceCubeOffsets
+                            in
+                            Scene3d.group cubeBlocks
                     in
-                    pieceEntities
-
+                    List.map pieceEntity placedPieces
                 Nothing ->
                     []
-
         entities =
             chessboard ++ boardEntities ++ [ gamePiece model ] ++ compassEntities
 
-        cubeOffsets = getCubeOffsets model.pieceType model.pieceRotIndex
+        currentPieceCubeOffsets = getCubeOffsets model.pieceType model.pieceRotIndex
         centerBlock =
-            case cubeOffsets of
+            case currentPieceCubeOffsets of
                 first :: _ -> first
                 [] -> { x = 0, y = 0, z = 0 }
 
@@ -630,7 +637,7 @@ view model =
                 centerColor = Color.purple
                 size = 16
                 offset = 24
-                -- Find min/max for normalization
+                
                 minX = List.minimum (List.map .x miniOffsets) |> Maybe.withDefault 0
                 minY = List.minimum (List.map .y miniOffsets) |> Maybe.withDefault 0
                 maxX = List.maximum (List.map .x miniOffsets) |> Maybe.withDefault 0
