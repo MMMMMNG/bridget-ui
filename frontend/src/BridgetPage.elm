@@ -21,6 +21,8 @@ import Task
 import Viewpoint3d
 import Html.Events
 import Rotations
+import Svg exposing (Svg)
+import Svg.Attributes
 
 -- MODEL
 
@@ -84,7 +86,7 @@ init _ =
         testGameState : GameState
         testGameState =
             { gameOver = False
-            , moveInvalid = True
+            , moveInvalid = False
             , winner = "Player 1"
             , board =
                 [ [ [ 0, 0, 0 ], [ 0, 2, 0 ], [ 0, 0, 0 ] ]
@@ -507,6 +509,76 @@ view model =
 
         rotIndexText =
             "Rotation: " ++ String.fromInt rotationIndexFromElm
+
+        -- Helper to draw a mini shape at a given position
+        miniShape : PieceType -> (Float, Float) -> Html msg
+        miniShape pieceType (left, top) =
+            let
+                miniOffsets = getCubeOffsets pieceType 0
+                color =
+                    case pieceType of
+                        OShape -> Color.yellow
+                        TShape -> Color.red
+                        ZShape -> Color.green
+                        LShape -> Color.orange
+                centerColor = Color.purple
+                size = 16
+                offset = 24
+                -- Find min/max for normalization
+                minX = List.minimum (List.map .x miniOffsets) |> Maybe.withDefault 0
+                minY = List.minimum (List.map .y miniOffsets) |> Maybe.withDefault 0
+                maxX = List.maximum (List.map .x miniOffsets) |> Maybe.withDefault 0
+                maxY = List.maximum (List.map .y miniOffsets) |> Maybe.withDefault 0
+                widthVal = maxX - minX + 1
+                heightVal = maxY - minY + 1
+            in
+            Svg.svg
+                [ Svg.Attributes.width (String.fromInt (widthVal * size + 2 * offset))
+                , Svg.Attributes.height (String.fromInt (heightVal * size + 2 * offset))
+                , Html.Attributes.style "position" "absolute"
+                , Html.Attributes.style "left" (String.fromFloat left ++ "px")
+                , Html.Attributes.style "top" (String.fromFloat top ++ "px")
+                , Html.Attributes.style "z-index" "20"
+                ]
+                (List.indexedMap
+                    (\i p ->
+                        let
+                            xVal = (p.x - minX) * size + offset
+                            yVal = (p.y - minY) * size + offset
+                            fillVal = if i == 0 then "purple" else
+                                case pieceType of
+                                    OShape -> "yellow"
+                                    TShape -> "red"
+                                    ZShape -> "green"
+                                    LShape -> "orange"
+                        in
+                        Svg.rect
+                            [ Svg.Attributes.x (String.fromInt xVal)
+                            , Svg.Attributes.y (String.fromInt yVal)
+                            , Svg.Attributes.width (String.fromInt size)
+                            , Svg.Attributes.height (String.fromInt size)
+                            , Svg.Attributes.fill fillVal
+                            , Svg.Attributes.stroke "#333"
+                            , Svg.Attributes.strokeWidth "2"
+                            , Svg.Attributes.rx "4"
+                            , Svg.Attributes.ry "4"
+                            ]
+                            []
+                    )
+                    miniOffsets
+                )
+
+        -- List of shapes and their vertical positions
+        shapeSvgs : List (Html msg)
+        shapeSvgs =
+            [ (OShape, 120)
+            , (ZShape, 180)
+            , (LShape, 240)
+            , (TShape, 300)
+            ]
+            |> List.map (\(ptype, top) -> miniShape ptype (20, toFloat top))
+
+        -- ...existing code...
     in
     Html.div
         [ Html.Attributes.style "position" "fixed"
@@ -520,6 +592,8 @@ view model =
         , Html.Attributes.style "user-select" "none"
         ]
         (
+            shapeSvgs
+            ++
             (if model.showInvalid then
                 [ Html.div
                     [ Html.Attributes.style "position" "absolute"
