@@ -3,6 +3,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE QualifiedDo #-}
+{-# LANGUAGE LinearTypes #-}
 module Main where
 
 import Control.Exception (handle)
@@ -15,6 +16,7 @@ import Foreign.JNI (showException, withJVM, runInAttachedThread)
 import qualified Language.Java as NonLinear
 import Language.Java.Inline.Safe
 import Language.Java.Safe
+import Foreign.JNI.Safe (newLocalRef)
 
 import Web.Scotty
 import qualified Data.Text.Lazy as TL
@@ -35,23 +37,27 @@ data GameState = GameState
   } deriving (Show, Eq)
 
 -- | Reads a Java GameState object and converts it to a Haskell GameState record.
-readGameState :: MonadIO m => J ('Class "brgt.GameInterface$GameState") -> m GameState
+readGameState :: MonadIO m => J ('Class "brgt.GameInterface$GameState") %1 -> m GameState
 readGameState jGameState = Linear.do
+  -- each reference must be used exactly once (linear types)
+  (it1, i') <- newLocalRef jGameState
+  (it2, i'') <- newLocalRef i'
+  (it3, it4) <- newLocalRef i''
   -- Read boolean fields
-  jGameOver <- [java| $jGameState.isGameOver() |]
-  gameOverHaskell <- NonLinear.reify jGameOver
+  jGameOver <- [java| $it1.isGameOver() |]
+  gameOverHaskell <- NonLinear.reify (unsafeCast jGameOver)
 
-  jMoveInvalid <- [java| $jGameState.isMoveInvalid() |]
-  moveInvalidHaskell <- NonLinear.reify jMoveInvalid
+  jMoveInvalid <- [java| $it2.isMoveInvalid() |]
+  moveInvalidHaskell <- NonLinear.reify (unsafeCast jMoveInvalid)
 
   -- Read String winner
-  jWinner <- [java| $jGameState.getWinner() |]
-  winnerHaskell <- NonLinear.reify jWinner
+  jWinner <- [java| $it3.getWinner() |]
+  winnerHaskell <- NonLinear.reify (unsafeCast jWinner)
 
   -- Read int[][][] board
-  jBoard <- [java| $jGameState.getBoard() |]
+  jBoard <- [java| $it4.getBoard() |]
   -- Reify converts a Java array to a Haskell list of lists
-  boardHaskell <- NonLinear.reify jBoard
+  boardHaskell <- NonLinear.reify (unsafeCast jBoard)
 
   Linear.return $ Ur GameState
     { gameOver = gameOverHaskell
@@ -93,6 +99,6 @@ main = do
 
                 gs <- makeMove (DT.pack "MINIMAX") (DT.pack mvstr)
 
-                html $ "<h2>" <> TL.fromStrict javaMessage <> TL.pack name <> "</h2>"
+                json gs
 
     -- The `scotty` function runs indefinitely.
