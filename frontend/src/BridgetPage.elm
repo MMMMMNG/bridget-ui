@@ -28,6 +28,9 @@ import Json.Decode as D
 import Json.Decode exposing (Decoder)
 import Url.Builder
 import Http
+import Process
+import Time
+
 -- MODEL
 
 type PieceType
@@ -81,6 +84,7 @@ type Msg
     | PlacePieceResult GameState
     | SelectPieceType PieceType
     | PlacePieceHttpResult (Result Http.Error (Maybe GameState))
+    | HideInvalid
 
 type Axis = X | Y | Z 
 
@@ -97,7 +101,6 @@ type alias GameState =
 init : () -> ( Model, Cmd Msg )
 init _ =
     let
-        -- testGameState removed
         showInvalidInit = False
         initialInventory =
             { l = 4, z = 4, t = 4, o = 2 }
@@ -294,14 +297,22 @@ update msg model =
         PlacePieceHttpResult (Err _) -> (model, Cmd.none)
         PlacePieceHttpResult (Ok Nothing) -> (model, Cmd.none)
         PlacePieceHttpResult (Ok (Just gs)) ->
-            -- Always update gameState after HTTP request
             let
-                -- Force Elm to treat the new GameState as different, even if structurally equal
                 newGameState = Just { gs | board = List.map identity gs.board }
+                showInvalid = gs.moveInvalid
+                cmd =
+                    if showInvalid then
+                        Process.sleep (2 * 1000)
+                            |> Task.perform (\_ -> HideInvalid)
+                    else
+                        Cmd.none
             in
-            ( { model | gameState = newGameState, showInvalid = gs.moveInvalid }
-            , Cmd.none
+            ( { model | gameState = newGameState, showInvalid = showInvalid }
+            , cmd
             )
+
+        HideInvalid ->
+            ( { model | showInvalid = False }, Cmd.none )
 
         PlacePiece ->
             (model, submitMove model.pieceType model.pieceRotIndex model.pieceY model.pieceX)
@@ -421,11 +432,24 @@ pTs pt = case pt of
     TShape -> "T"
 
 submitMove : PieceType -> Int -> Int -> Int -> Cmd Msg
-submitMove piece rotIndex x y = 
-    let 
-        command = String.join " " [pTs piece, 
-                                   String.fromInt rotIndex, 
-                                   String.fromInt x, 
+submitMove piece rotIndex x y =
+    let
+        actualRotIndex =
+            let
+                rotations =
+                    case piece of
+                        LShape -> Rotations.lBlockRotations
+                        TShape -> Rotations.tBlockRotations
+                        ZShape -> Rotations.zBlockRotations
+                        OShape -> Rotations.oBlockRotations
+            in
+            case List.drop rotIndex rotations |> List.head of
+                Just rotation -> rotation.index
+                Nothing -> rotIndex
+
+        command = String.join " " [pTs piece,
+                                   String.fromInt actualRotIndex,
+                                   String.fromInt x,
                                    String.fromInt y]
         u = Url.Builder.crossOrigin "http://localhost:3000" [ "move", command ] []
     in Http.get
@@ -434,15 +458,6 @@ submitMove piece rotIndex x y =
         }
 
 gsExpecter = Http.expectJson PlacePieceHttpResult gsDecoder
-
-stringDecoderWithDefault : a -> D.Decoder a -> D.Decoder a
-stringDecoderWithDefault defaultValue decoder =
-    D.string
-        |> D.andThen (\str ->
-            case D.decodeString decoder str of
-                Ok val -> D.succeed val
-                Err _ -> D.succeed defaultValue
-        )
 
 gsDecoder : D.Decoder (Maybe GameState)
 gsDecoder =
@@ -546,19 +561,9 @@ main =
         , view = view
         }
 
-type alias PlacedPiece =
-    { pieceType : PieceType
-    , rotIdx : Int
-    , x : Int
-    , y : Int
-    , z : Int
-    , v : Int
-    }
-
 view : Model -> Html Msg
 view model =
     let
-        -- Render the actual board from gameState, not hardcoded pieces
         boardEntities =
             case model.gameState of
                 Just gs ->
