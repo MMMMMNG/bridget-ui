@@ -31,6 +31,10 @@ type PieceType
     | OShape
 
 
+type Player
+    = Player1
+    | Player2
+
 type alias Model =
     { azimuth : Float
     , elevation : Float
@@ -44,6 +48,7 @@ type alias Model =
     , pieceY : Int
     , pieceZ : Int
     , pieceType : PieceType
+    , currentPlayer : Player
     }
 
 type Msg
@@ -56,6 +61,7 @@ type Msg
     | MovePiece Int Int
     | RotatePiece Axis Int
     | SwitchPieceType
+    | PlacePiece
 
 type Axis = X | Y | Z 
 
@@ -78,6 +84,7 @@ init _ =
       , pieceY = 3
       , pieceZ = 0
       , pieceType = LShape
+      , currentPlayer = Player1
       }
     , Task.perform
         (\vp -> WindowResize vp.scene.width vp.scene.height)
@@ -250,6 +257,15 @@ update msg model =
               }
             , Cmd.none
             )
+
+        PlacePiece ->
+            let
+                nextPlayer =
+                    case model.currentPlayer of
+                        Player1 -> Player2
+                        Player2 -> Player1
+            in
+            ( { model | currentPlayer = nextPlayer }, Cmd.none )
 
 
 
@@ -424,6 +440,13 @@ view model =
 
         rotIndexText =
             "Rotation: " ++ String.fromInt rotationIndexFromElm
+
+        playerText =
+            "Player: "
+                ++ (case model.currentPlayer of
+                        Player1 -> "1"
+                        Player2 -> "2"
+                   )
     in
     Html.div
         [ Html.Attributes.style "position" "fixed"
@@ -444,6 +467,22 @@ view model =
             , Html.Events.onClick SwitchPieceType
             ]
             [ Html.text "Switch Piece" ]
+        , Html.button
+            [ Html.Attributes.style "position" "absolute"
+            , Html.Attributes.style "z-index" "10"
+            , Html.Attributes.style "top" "50%"
+            , Html.Attributes.style "right" "20px"
+            , Html.Attributes.style "transform" "translateY(-50%)"
+            , Html.Attributes.style "padding" "16px 24px"
+            , Html.Attributes.style "font-size" "18px"
+            , Html.Attributes.style "background" "#6c47a6"
+            , Html.Attributes.style "color" "white"
+            , Html.Attributes.style "border" "none"
+            , Html.Attributes.style "border-radius" "8px"
+            , Html.Attributes.style "box-shadow" "0 2px 8px rgba(0,0,0,0.15)"
+            , Html.Events.onClick PlacePiece
+            ]
+            [ Html.text "Place" ]
         , Html.div
             [ Html.Attributes.style "position" "absolute"
             , Html.Attributes.style "z-index" "10"
@@ -454,7 +493,10 @@ view model =
             , Html.Attributes.style "border-radius" "6px"
             , Html.Attributes.style "font-family" "monospace"
             ]
-            [ Html.text ("Center: " ++ centerCoords ++ " | " ++ rotIndexText) ]
+            [ Html.div []
+                [ Html.text playerText ]
+            , Html.text ("Center: " ++ centerCoords ++ " | " ++ rotIndexText)
+            ]
         , Scene3d.sunny
             { camera = createCamera model
             , entities = entities
