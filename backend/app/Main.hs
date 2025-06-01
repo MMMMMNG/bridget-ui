@@ -15,9 +15,10 @@ import qualified Data.Text.IO as DTIO
 import Foreign.JNI (showException, withJVM, runInAttachedThread)
 --import qualified Language.Java as NonLinear
 import Language.Java
-import Language.Java.Inline.Safe
+import Language.Java.Inline
+--import Language.Java.Inline.Safe
 --import Language.Java.Safe
-import Foreign.JNI.Safe (newLocalRef)
+--import Foreign.JNI.Safe (newLocalRef)
 
 import Web.Scotty
 import qualified Data.Text.Lazy as TL
@@ -38,27 +39,27 @@ data GameState = GameState
   } deriving (Show, Eq)
 
 -- | Reads a Java GameState object and converts it to a Haskell GameState record.
-readGameState :: MonadIO m => J ('Class "brgt.GameInterface$GameState") -> m GameState
-readGameState jGameState = liftIO $ do
+readGameState :: J ('Class "brgt.GameInterface$GameState") -> IO GameState
+readGameState jGameState = do
   -- No newLocalRef needed as we are not in a linear context
   -- Direct Java calls are fine here with the non-linear interface
-  jGameOver <- coerce [java| $jGameState.isGameOver() |]
+  gameOverHaskell <- [java| $jGameState.isGameOver() |]
   --gameOverHaskell <- coerce (jGameOver :: J ('Prim "boolean"))
 
-  jMoveInvalid <- coerce [java| $jGameState.isMoveInvalid() |]
+  moveInvalidHaskell <- [java| $jGameState.isMoveInvalid() |]
   --moveInvalidHaskell <- coerce (jMoveInvalid :: J ('Prim "boolean"))
 
   jWinner <- [java| $jGameState.getWinner() |]
   winnerHaskell <- reify (jWinner :: J ('Class "java.lang.String") )
 
-  jBoard <- [java| $jGameState.getBoard() |]
-  boardHaskell <- reify (jBoard :: J ('Array ('Array ('Array ('Prim "int")))))
+  --jBoard <- [java| $jGameState.getBoard() |]
+  --boardHaskell <- reify jBoard --(jBoard :: J ('Array ('Array ('Array ('Prim "int")))))
 
   pure GameState
     { gameOver    = gameOverHaskell
     , moveInvalid = moveInvalidHaskell
     , winner      = winnerHaskell
-    , board       = boardHaskell
+    , board       = [[[1]]] --boardHaskell
     }
 
 
@@ -68,7 +69,7 @@ makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
     jmv <- reflect mv
 
     jgs <- [java| brgt.GameState.playerMove($jal, $jmv) |]
-    gs <- reify jgs
+    gs <- readGameState jgs
     pure gs
 
 main :: IO ()
