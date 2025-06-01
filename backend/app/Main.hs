@@ -12,7 +12,7 @@ import Control.Monad ((>=>))
 import qualified Bazel.Runfiles as Runfiles
 import qualified Data.Text as DT
 import qualified Data.Text.IO as DTIO
-import Foreign.JNI (showException, withJVM, runInAttachedThread)
+import Foreign.JNI (showException, runInAttachedThread)
 --import qualified Language.Java as NonLinear
 import Language.Java
 import Language.Java.Inline
@@ -21,15 +21,15 @@ import Language.Java.Inline
 --import Foreign.JNI.Safe (newLocalRef)
 
 import Web.Scotty
-import qualified Data.Text.Lazy as TL
+--import qualified Data.Text.Lazy as TL
 
 import Control.Concurrent (runInBoundThread)
-import Prelude.Linear (Ur(..))
+--import Prelude.Linear (Ur(..))
 --import qualified System.IO.Linear as Linear
 --import qualified Control.Functor.Linear as Linear
-import Control.Monad.IO.Class.Linear (MonadIO)
+--import Control.Monad.IO.Class.Linear (MonadIO)
 
-import Data.Aeson (ToJSON(..), encode, object, (.=))
+import Data.Aeson (ToJSON(..), object, (.=))
 
 data GameState = GameState
   { gameOver    :: Bool
@@ -62,13 +62,18 @@ readGameState jGameState = do
     , board       = [[[1]]] --boardHaskell
     }
 
+instance ToJSON GameState where
+  toJSON gs = object [  "isGameOver" .= gameOver gs, 
+                        "isLastMoveInvalid" .= moveInvalid gs, 
+                        "winner" .= winner gs, 
+                        "board" .= board gs]
 
 makeMove :: DT.Text -> DT.Text -> ActionM GameState
 makeMove algo mv = liftIO $ runInBoundThread $ runInAttachedThread $ do
     jal <- reflect algo
     jmv <- reflect mv
 
-    jgs <- [java| brgt.GameState.playerMove($jal, $jmv) |]
+    jgs <- [java| brgt.GameInterface.playerMove($jal, $jmv) |]
     gs <- readGameState jgs
     pure gs
 
@@ -89,7 +94,7 @@ main = do
             get "/" $ do
                 html "<h1>Welcome To bridget ui!</h1>"
 
-            post "/move/:mvstr" $ do
+            get "/move/:mvstr" $ do
                 mvstr <- pathParam "mvstr"
                 liftIO $ putStrLn ("command: " <> mvstr)
 
