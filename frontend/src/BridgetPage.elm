@@ -24,6 +24,10 @@ import Rotations
 import Svg
 import Svg.Attributes
 
+import Json.Decode as D
+import Json.Decode exposing (Decoder)
+import Url.Builder
+import Http
 -- MODEL
 
 type PieceType
@@ -76,6 +80,7 @@ type Msg
     | PlacePiece
     | PlacePieceResult GameState
     | SelectPieceType PieceType
+    | PlacePieceHttpResult (Result Http.Error (Maybe GameState))
 
 type Axis = X | Y | Z 
 
@@ -299,6 +304,10 @@ update msg model =
               }
             , Cmd.none
             )
+        
+        PlacePieceHttpResult (Err _) -> (model, Cmd.none)
+        PlacePieceHttpResult (Ok Nothing) -> (model, Cmd.none)
+        PlacePieceHttpResult (Ok (Just gs)) -> update (PlacePieceResult gs) model
 
         PlacePiece ->
             -- ...your logic for sending the move to the backend...
@@ -342,6 +351,9 @@ update msg model =
               }
             , Cmd.none
             )
+            ( { model | currentPlayer = nextPlayer }, Cmd.none )
+        PlacePieceResult gamestate -> 
+            (model, submitMove model.pieceType model.pieceRotIndex model.pieceX model.pieceY)
 
 
 
@@ -407,6 +419,54 @@ compassEntities =
                 |> Scene3d.blockWithShadow (Material.matte (Color.rgb255 200 200 0))
     in
     [ n, e, s, w ]
+
+-- HTTP
+
+pTs : PieceType -> String
+pTs pt = case pt of
+    LShape -> "L"
+    OShape -> "O"
+    ZShape -> "Z"
+    TShape -> "T"
+
+submitMove : PieceType -> Int -> Int -> Int -> Cmd Msg
+submitMove piece rotIndex x y = 
+    let 
+        command = String.join " " [pTs piece, 
+                                   String.fromInt rotIndex, 
+                                   String.fromInt x, 
+                                   String.fromInt y]
+        u = Url.Builder.crossOrigin "http://localhost:3000" [ "move", command ] []
+    in Http.get
+        { url = u
+        , expect = gsExpecter
+        }
+
+gsExpecter = Http.expectJson PlacePieceHttpResult gsDecoder
+
+stringDecoderWithDefault : a -> D.Decoder a -> D.Decoder a
+stringDecoderWithDefault defaultValue decoder =
+    D.string
+        |> D.andThen (\str ->
+            case D.decodeString decoder str of
+                Ok val -> D.succeed val
+                Err _ -> D.succeed defaultValue
+        )
+
+
+gsDecoder : D.Decoder (Maybe GameState)
+gsDecoder =
+    -- Attempt to decode a single GameState object.
+    -- If the object is not found or has issues, the outer `optional` (map Just, map Nothing) handles it.
+    D.oneOf
+        [ D.map Just <|
+            D.map4 GameState
+                (D.field "isGameOver" D.bool) -- Corrected from D.string to D.bool based on GameState
+                (D.field "isLastMoveInvalid" D.bool)
+                (D.field "winner" D.string)
+                (D.field "board" (stringDecoderWithDefault [[[1]]] (D.list (D.list (D.list D.int)))))
+        , D.succeed Nothing -- If the field is missing or decoding fails, return Nothing
+        ]
 
 
 -- SUBSCRIPTIONS
