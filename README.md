@@ -4,6 +4,13 @@ Using benajakuhn's [bridget implementation](https://github.com/benajakuhn/wodsBr
 
 The bridge between elm and java is a haskell webserver (scotty) using [inline-java](https://github.com/tweag/inline-java)
 
+## Download Source
+...including submodule:
+```shell
+git clone --recurse-submodules https://github.com/MMMMMNG/bridget-ui.git
+cd bridget-ui/
+```
+
 ## Running the full app:
 ```shell
 cd compose/prod
