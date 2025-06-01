@@ -25,7 +25,7 @@ data GameState = GameState
   { gameOver    :: Bool
   , moveInvalid :: Bool
   , winner      :: DT.Text
-  , board       :: DT.Text --right, why bother parsing it when it has to be serialized anyway? 
+  , board       :: DT.Text -- right, why bother parsing it when it has to be serialized anyway? 
   } deriving (Show, Eq)    -- ...putting the "lazy" back in "lazy string" *ba dum ts* (and yes, I know it's strict)
 
 -- | Reads a Java GameState object and converts it to a Haskell GameState record.
@@ -34,10 +34,8 @@ readGameState jGameState = do
   -- No newLocalRef needed as we are not in a linear context
   -- Direct Java calls are fine here with the non-linear interface
   gameOverHaskell <- [java| $jGameState.isGameOver() |]
-  --gameOverHaskell <- coerce (jGameOver :: J ('Prim "boolean"))
 
   moveInvalidHaskell <- [java| $jGameState.isMoveInvalid() |]
-  --moveInvalidHaskell <- coerce (jMoveInvalid :: J ('Prim "boolean"))
 
   jWinner <- [java| $jGameState.getWinner() |]
   winnerHaskell <- reify (jWinner :: J ('Class "java.lang.String") )
