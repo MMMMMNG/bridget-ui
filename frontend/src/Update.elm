@@ -3,7 +3,7 @@ module Update exposing (update)
 import Types exposing (..)
 import Constants exposing (boardSize, boardHeight)
 import Rotations
-import Utils exposing (getCubeOffsets, pTs)
+import Utils exposing (getCubeOffsets, pTs, keepPieceInBounds)
 import Task
 import Json.Decode as D
 import Http
@@ -136,24 +136,9 @@ update msg model =
 
         MovePiece dx dy ->
             let
-                cubeOffsets = getCubeOffsets model.pieceType model.pieceRotIndex
-                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-
-                minX = 0 - minDx
-                maxX = boardSize - 1 - maxDx
-                minY = 0 - minDy
-                maxY = boardSize - 1 - maxDy
-                minZ = 0 - minDz
-                maxZ = boardHeight - 1 - maxDz
-
-                newX = clamp minX maxX (model.pieceX + dx)
-                newY = clamp minY maxY (model.pieceY + dy)
-                newZ = clamp minZ maxZ model.pieceZ
+                (x, y) = (model.pieceX + dx, model.pieceY + dy)
+                (newX, newY, newZ) = 
+                    keepPieceInBounds model.pieceType model.pieceRotIndex x y model.pieceZ
             in
             ( { model | pieceX = newX, pieceY = newY, pieceZ = newZ }, Cmd.none )
 
