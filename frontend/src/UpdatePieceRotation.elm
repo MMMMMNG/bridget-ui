@@ -133,13 +133,24 @@ rotMatYcw =
     , [ 0, 1, 0 ]
     , [ 1, 0, 0 ]
     ]
-
+rotMatIdent : List (List Int)
 rotMatIdent = 
     [ [ 1, 0, 0 ]
     , [ 0, 1, 0 ]
     , [ 0, 0, 1 ]
     ]
-
+rotMatXccw : List (List Int)
+rotMatXccw =
+    [ [ 1, 0, 0 ]
+    , [ 0, 0, -1 ]
+    , [ 0, 1, 0 ]
+    ]
+rotMatXcw : List (List Int)
+rotMatXcw =
+    [ [ 1, 0, 0 ]
+    , [ 0, 0, 1 ]
+    , [ 0, -1, 0 ]
+    ]
 {-| take the current rotationgroup and the pressed key string,
     and return the correct new rotation index.
 -}
@@ -147,10 +158,12 @@ rotByKey : String -> Rotation -> Int
 rotByKey keyStr rg = 
     let rm = 
             case keyStr of
-                "a" -> rotMatZcw
-                "d" -> rotMatZccw
+                "a" -> rotMatXccw
+                "d" -> rotMatXcw
                 "w" -> rotMatYcw
                 "s" -> rotMatYccw
+                "q" -> rotMatZcw
+                "e" -> rotMatZccw
                 _   -> rotMatIdent -- noop
 
         rotatedRG = applyRotMat rm rg
