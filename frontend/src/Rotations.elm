@@ -66,7 +66,7 @@ lBlockRotationGroups =
       , next = { a = 2, d = 0, w = 4, s = 5, q = 5, e = 15, z = 2 }
       }
     , { rotation = { index = 2, positions = [ {x=0,y=0,z=0}, {x=-1,y=1,z=0}, {x=0,y=-1,z=0}, {x=0,y=1,z=0} ] }
-      , next = { a = 3, d = 1, w = 5, s = 6, q = 2, e = 2, z = 3 }
+      , next = { a = 3, d = 1, w = 5, s = 6, q = 6, e = 14, z = 3 }
       }
     , { rotation = { index = 3, positions = [ {x=0,y=0,z=1}, {x= 0,y=-1,z=1}, {x=0,y=1,z=1}, {x=0,y=1,z=0} ] }
       , next = { a = 0, d = 2, w = 6, s = 7, q = 7, e = 13, z = 4 }
@@ -78,7 +78,7 @@ lBlockRotationGroups =
       , next = { a = 6, d = 7, w = 8, s = 9, q = 9, e = 1, z = 6 }
       }
     , { rotation = { index = 6, positions = [ {x=0,y=0,z=0}, {x= 1,y=0,z=0}, {x=-1,y=0,z=0}, {x=-1,y=-1,z=0} ] }
-      , next = { a = 7, d = 8, w = 9, s = 10, q = 6, e = 6, z = 7 }
+      , next = { a = 7, d = 8, w = 9, s = 10, q = 10, e = 2, z = 7 }
       }
     , { rotation = { index = 7, positions = [ {x=0,y=0,z=1}, {x= -1,y=0,z=1}, {x=1,y=0,z=1}, {x=-1,y=0,z=0} ] }
       , next = { a = 8, d = 9, w = 10, s = 11, q = 11, e = 3, z = 8 }
@@ -90,7 +90,7 @@ lBlockRotationGroups =
       , next = { a = 10, d = 11, w = 12, s = 13, q = 15, e = 5, z = 10 }
       }
     , { rotation = { index = 10, positions = [ {x=0,y=0,z=0}, {x= 1,y=-1,z=0}, {x=0,y=1,z=0}, {x=0,y=-1,z=0} ] }
-      , next = { a = 11, d = 12, w = 13, s = 14, q = 10, e = 10, z = 11 }
+      , next = { a = 11, d = 12, w = 13, s = 14, q = 14, e = 6, z = 11 }
       }
     , { rotation = { index = 11, positions = [ {x=0,y=0,z=1}, {x= 0,y=1,z=1}, {x=0,y=-1,z=1}, {x=0,y=-1,z=0} ] }
       , next = { a = 12, d = 13, w = 14, s = 15, q = 13, e = 7, z = 12 }
@@ -102,7 +102,7 @@ lBlockRotationGroups =
       , next = { a = 14, d = 15, w = 16, s = 17, q = 3, e = 11, z = 14 }
       }
     , { rotation = { index = 14, positions = [ {x=0,y=0,z=0}, {x=1,y=1,z=0}, {x=-1,y=0,z=0}, {x=1,y=0,z=0} ] }
-      , next = { a = 15, d = 16, w = 17, s = 18, q = 14, e = 14, z = 15 }
+      , next = { a = 15, d = 16, w = 17, s = 18, q = 2, e = 10, z = 15 }
       }
     , { rotation = { index = 15, positions = [ {x=0,y=0,z=0}, {x=1,y=0,z=1}, {x=-1,y=0,z=0}, {x=1,y=0,z=0} ] }
       , next = { a = 16, d = 17, w = 18, s = 19, q = 1, e = 9, z = 16 }
