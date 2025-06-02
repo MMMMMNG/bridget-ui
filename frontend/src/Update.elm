@@ -10,6 +10,7 @@ import Http
 import Url.Builder
 import Process
 import List.Extra
+import UpdatePieceRotation exposing (rotByKey)
 
 submitMove : PieceType -> Int -> Int -> Int -> Cmd Msg
 submitMove piece rotIndex x y =
@@ -472,7 +473,7 @@ update msg model =
                             Nothing
 
                 -- If found, use the index in the list for pieceRotIndex, and .rotation.index for display
-                (newRotIndex, displayRotIndex) =
+                (_, displayRotIndex) =
                     case nextGroup of
                         Just g ->
                             let
@@ -484,6 +485,10 @@ update msg model =
                                 Nothing -> (model.pieceRotIndex, model.pieceRotIndex)
                         Nothing ->
                             (model.pieceRotIndex, model.pieceRotIndex)
+
+                newRotIndex = case currentGroup of
+                    Just cg -> rotByKey keyStr cg
+                    _ -> 0 --hmm
 
                 cubeOffsets = getCubeOffsets model.pieceType newRotIndex
                 minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
