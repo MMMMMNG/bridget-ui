@@ -157,52 +157,6 @@ update msg model =
             in
             ( { model | pieceX = newX, pieceY = newY, pieceZ = newZ }, Cmd.none )
 
-        RotatePiece axis dir ->
-            let
-                (_, maxIndex) =
-                    case model.pieceType of
-                        LShape -> (Rotations.lBlockRotations, 24)
-                        TShape -> (Rotations.tBlockRotations, 12)
-                        ZShape -> (Rotations.zBlockRotations, 12)
-                        OShape -> (Rotations.oBlockRotations, 3)
-                newIndex =
-                    let
-                        idx = model.pieceRotIndex + dir
-                    in
-                    if idx < 0 then
-                        maxIndex - 1
-                    else if idx >= maxIndex then
-                        0
-                    else
-                        idx
-
-                cubeOffsets = getCubeOffsets model.pieceType newIndex
-                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-
-                minX = 0 - minDx
-                maxX = boardSize - 1 - maxDx
-                minY = 0 - minDy
-                maxY = boardSize - 1 - maxDy
-                minZ = 0 - minDz
-                maxZ = boardHeight - 1 - maxDz
-
-                newX = clamp minX maxX model.pieceX
-                newY = clamp minY maxY model.pieceY
-                newZ = clamp minZ maxZ model.pieceZ
-            in
-            ( { model
-                | pieceRotIndex = newIndex
-                , pieceX = newX
-                , pieceY = newY
-                , pieceZ = newZ
-              }
-            , Cmd.none
-            )
         
         PlacePieceHttpResult (Err _) -> 
             ( { model | aiThinking = False }, Cmd.none )
