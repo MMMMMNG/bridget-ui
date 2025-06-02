@@ -1,6 +1,10 @@
 module UpdatePieceRotation exposing (..)
 import Rotations exposing (Rotation, Position3D, tBlockRotations, lBlockRotations, zBlockRotations, oBlockRotations)
 import Set
+import Types exposing (..)
+import Utils exposing (getCubeOffsets)
+import Constants exposing (boardSize, boardHeight)
+import List.Extra
 -- basic concept: use a given rot mat for each key (w a s d), apply it to the piece, then
 -- "normalize" the piece-translation by moving it into the positive octant
 -- or if it is already in the positive octant, towards zero. Then the piece is "tucked"
@@ -13,6 +17,58 @@ import Set
 -- to "tuck a piece in" I basically need to compute the bounding cuboid of the piece and then
 -- move its corner to the origin.
 
+
+{-| update the rotation of the current piece after e.g. a keypress
+-}
+updatePiceRotation : String -> Model -> ( Model, Cmd Msg )
+updatePiceRotation keyStr model =
+            let
+                rotationGroups =
+                    case model.pieceType of
+                        LShape -> Rotations.lBlockRotations
+                        TShape -> Rotations.tBlockRotations
+                        ZShape -> Rotations.zBlockRotations
+                        OShape -> Rotations.oBlockRotations
+
+                -- Find the current group by list index
+                currentGroup =
+                    List.drop model.pieceRotIndex rotationGroups |> List.head
+
+                -- Find the group in the list whose .rotation.index matches the target index
+                findGroupByRotationIndex idx =
+                    List.Extra.find (\g -> g.index == idx) rotationGroups
+
+                newRotIndex = case currentGroup of
+                    Just cg -> rotByKey keyStr cg
+                    _ -> 0 --hmm
+
+                cubeOffsets = getCubeOffsets model.pieceType newRotIndex
+                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+
+                minX = 0 - minDx
+                maxX = boardSize - 1 - maxDx
+                minY = 0 - minDy
+                maxY = boardSize - 1 - maxDy
+                minZ = 0 - minDz
+                maxZ = boardHeight - 1 - maxDz
+
+                newX = clamp minX maxX model.pieceX
+                newY = clamp minY maxY model.pieceY
+                newZ = clamp minZ maxZ model.pieceZ
+            in
+            ( { model
+                | pieceRotIndex = newRotIndex
+                , pieceX = newX
+                , pieceY = newY
+                , pieceZ = newZ
+              }
+            , Cmd.none
+            )
 
 {-| Applies a 3x3 rotation matrix to each position in the GameObject's rotation data.
     The matrix is expected to be a List of 3 Lists of 3 Floats.
