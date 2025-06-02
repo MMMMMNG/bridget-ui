@@ -71,19 +71,6 @@ view model =
                 first :: _ -> first
                 [] -> { x = 0, y = 0, z = 0 }
 
-        rotationIndexFromElm =
-            let
-                rotationGroups =
-                    case model.pieceType of
-                        LShape -> Rotations.lBlockRotationGroups
-                        TShape -> Rotations.tBlockRotationGroups
-                        ZShape -> Rotations.zBlockRotationGroups
-                        OShape -> Rotations.oBlockRotationGroups
-            in
-            case List.drop model.pieceRotIndex rotationGroups |> List.head of
-                Just group -> group.rotation.index
-                Nothing -> model.pieceRotIndex
-
         centerCoords =
             "(" ++ String.fromInt (model.pieceX + centerBlock.x)
             ++ ", "
@@ -93,7 +80,7 @@ view model =
             ++ ")"
 
         rotIndexText =
-            "Rotation: " ++ String.fromInt rotationIndexFromElm
+            "Rotation: " ++ String.fromInt model.pieceRotIndex
 
         pieceCount : PieceType -> Int
         pieceCount pt =

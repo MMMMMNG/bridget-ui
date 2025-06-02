@@ -9,13 +9,13 @@ getCubeOffsets pieceType rotIndex =
     let
         rotationGroups =
             case pieceType of
-                LShape -> Rotations.lBlockRotationGroups
-                TShape -> Rotations.tBlockRotationGroups
-                ZShape -> Rotations.zBlockRotationGroups
-                OShape -> Rotations.oBlockRotationGroups
+                LShape -> Rotations.lBlockRotations
+                TShape -> Rotations.tBlockRotations
+                ZShape -> Rotations.zBlockRotations
+                OShape -> Rotations.oBlockRotations
     in
     case List.drop rotIndex rotationGroups |> List.head of
-        Just group -> group.rotation.positions
+        Just group -> group.positions
         Nothing -> []
 
 mouseDecoder : (Float -> Float -> Msg) -> Decode.Decoder Msg
