@@ -1,5 +1,5 @@
 module UpdatePieceRotation exposing (..)
-import Rotations exposing (RotationGroup, Position3D, tBlockRotationGroups, lBlockRotationGroups, zBlockRotationGroups, oBlockRotationGroups)
+import Rotations exposing (Rotation, Position3D, tBlockRotations, lBlockRotations, zBlockRotations, oBlockRotations)
 import Set
 -- basic concept: use a given rot mat for each key (w a s d), apply it to the piece, then
 -- "normalize" the piece-translation by moving it into the positive octant
@@ -17,15 +17,13 @@ import Set
 {-| Applies a 3x3 rotation matrix to each position in the GameObject's rotation data.
     The matrix is expected to be a List of 3 Lists of 3 Floats.
 -}
-applyRotMat : List (List Int) -> RotationGroup -> RotationGroup
+applyRotMat : List (List Int) -> Rotation -> Rotation
 applyRotMat rotMatrix gameObject =
     let
         rotatedPositions =
-            List.map (applyMatrixToPosition rotMatrix) gameObject.rotation.positions
-        rrs = gameObject.rotation
-        newRots = {rrs | positions = rotatedPositions}
+            List.map (applyMatrixToPosition rotMatrix) gameObject.positions
     in
-    { gameObject | rotation = newRots }
+    { gameObject | positions = rotatedPositions }
 
 
 {-| Applies a 3x3 matrix to a single Position.
@@ -89,7 +87,7 @@ rotMatIdent =
 {-| take the current rotationgroup and the pressed key string,
     and return the correct new rotation index.
 -}
-rotByKey : String -> RotationGroup -> Int
+rotByKey : String -> Rotation -> Int
 rotByKey keyStr rg = 
     let rm = 
             case keyStr of
@@ -108,15 +106,15 @@ rotByKey keyStr rg =
     meaning duplicate positions within a single list are treated as a single occurrence.
     this shouldn't matter because no shape in bridget as duplicate positions (how could it?)
 -}
-haveSamePositionsSet : RotationGroup -> RotationGroup -> Bool
+haveSamePositionsSet : Rotation -> Rotation -> Bool
 haveSamePositionsSet group1 group2 =
     let
         -- Helper to convert Position3D to a comparable tuple
         positionToTuple : Position3D -> ( Int, Int, Int )
         positionToTuple pos = ( pos.x, pos.y, pos.z )
 
-        positions1 = List.map positionToTuple group1.rotation.positions
-        positions2 = List.map positionToTuple group2.rotation.positions
+        positions1 = List.map positionToTuple group1.positions
+        positions2 = List.map positionToTuple group2.positions
         -- Convert lists to Sets. This naturally handles uniqueness and "order".
         set1 = Set.fromList positions1
         set2 = Set.fromList positions2
@@ -127,9 +125,9 @@ haveSamePositionsSet group1 group2 =
 {-| Finds the minimum x, y, and z values across all positions in a RotationGroup.
     Returns Nothing if the list of positions is empty.
 -}
-findMinExtents : RotationGroup -> Maybe Position3D
+findMinExtents : Rotation -> Maybe Position3D
 findMinExtents group =
-    case group.rotation.positions of
+    case group.positions of
         [] ->
             Nothing
 
@@ -150,7 +148,7 @@ findMinExtents group =
     become 0, effectively moving the object to the positive octant with a corner at the origin.
     If the rotation group has no positions, it returns the group unchanged.
 -}
-tuckIntoPositiveOctant : RotationGroup -> RotationGroup
+tuckIntoPositiveOctant : Rotation -> Rotation
 tuckIntoPositiveOctant group =
     case findMinExtents group of
         Nothing -> group -- If there are no positions, nothing to shift.
@@ -167,23 +165,22 @@ tuckIntoPositiveOctant group =
                     }
 
                 -- Apply the translation to all positions
-                shiftedPositions = List.map applyTranslation group.rotation.positions
-                gr = group.rotation
+                shiftedPositions = List.map applyTranslation group.positions
             in
             -- Return a new RotationGroup with the shifted positions
-            { group | rotation = { gr | positions = shiftedPositions }}
+            { group | positions = shiftedPositions }
 
 {-| given a rotated piece, this function finds the first match in any
     of the rotationgroup lists and outputs its index.
 -}
-findNewRotIndexFromRotatedPiece : RotationGroup -> Int
+findNewRotIndexFromRotatedPiece : Rotation -> Int
 findNewRotIndexFromRotatedPiece rotatedRg =
     let -- we gotta tuck RGs before comparing 'em (normalization)
         -- because the rotation might've changed relative translations
         tuckedRg = tuckIntoPositiveOctant rotatedRg
 
         -- helper function, checks if a rotationgroup matches our rotated RG
-        check : RotationGroup -> Bool
+        check : Rotation -> Bool
         check rg = 
             let --can't forget to tuck our contender, gotta be normalized too
                 tuckedRGtoBeChecked = tuckIntoPositiveOctant rg
@@ -191,18 +188,18 @@ findNewRotIndexFromRotatedPiece rotatedRg =
             in haveSamePositionsSet tuckedRg tuckedRGtoBeChecked
 
         --helper function, find first matching rotation
-        findFirst : List RotationGroup -> Int
+        findFirst : List Rotation -> Int
         findFirst lst = case lst of
             []      -> 0 --just default to rotindex 0.
             l :: ls -> if check l 
-                then l.rotation.index
+                then l.index
                 else findFirst ls
         
         --concat all RGs into one huge list
         allRGs = List.concat 
-            [   tBlockRotationGroups
-            ,   lBlockRotationGroups
-            ,   zBlockRotationGroups
-            ,   oBlockRotationGroups
+            [   tBlockRotations
+            ,   lBlockRotations
+            ,   zBlockRotations
+            ,   oBlockRotations
             ]
     in findFirst allRGs

@@ -19,13 +19,13 @@ submitMove piece rotIndex x y =
             let
                 rotationGroups =
                     case piece of
-                        LShape -> Rotations.lBlockRotationGroups
-                        TShape -> Rotations.tBlockRotationGroups
-                        ZShape -> Rotations.zBlockRotationGroups
-                        OShape -> Rotations.oBlockRotationGroups
+                        LShape -> Rotations.lBlockRotations
+                        TShape -> Rotations.tBlockRotations
+                        ZShape -> Rotations.zBlockRotations
+                        OShape -> Rotations.oBlockRotations
             in
             case List.drop rotIndex rotationGroups |> List.head of
-                Just group -> group.rotation.index
+                Just group -> group.index
                 Nothing -> rotIndex
 
         command = String.join " " [pTs piece,
@@ -161,10 +161,10 @@ update msg model =
             let
                 (rotationGroups, maxIndex) =
                     case model.pieceType of
-                        LShape -> (Rotations.lBlockRotationGroups, 24)
-                        TShape -> (Rotations.tBlockRotationGroups, 12)
-                        ZShape -> (Rotations.zBlockRotationGroups, 12)
-                        OShape -> (Rotations.oBlockRotationGroups, 3)
+                        LShape -> (Rotations.lBlockRotations, 24)
+                        TShape -> (Rotations.tBlockRotations, 12)
+                        ZShape -> (Rotations.zBlockRotations, 12)
+                        OShape -> (Rotations.oBlockRotations, 3)
                 newIndex =
                     let
                         idx = model.pieceRotIndex + dir
@@ -423,68 +423,18 @@ update msg model =
             let
                 rotationGroups =
                     case model.pieceType of
-                        LShape -> Rotations.lBlockRotationGroups
-                        TShape -> Rotations.tBlockRotationGroups
-                        ZShape -> Rotations.zBlockRotationGroups
-                        OShape -> Rotations.oBlockRotationGroups
+                        LShape -> Rotations.lBlockRotations
+                        TShape -> Rotations.tBlockRotations
+                        ZShape -> Rotations.zBlockRotations
+                        OShape -> Rotations.oBlockRotations
 
                 -- Find the current group by list index
                 currentGroup =
                     List.drop model.pieceRotIndex rotationGroups |> List.head
 
-                -- Get the next group index in the list, based on the key pressed
-                nextGroupIndex =
-                    case currentGroup of
-                        Just group ->
-                            case keyStr of
-                                "a" -> group.next.a
-                                "d" -> group.next.d
-                                "w" -> group.next.w
-                                "s" -> group.next.s
-                                "q" -> group.next.q
-                                "e" -> group.next.e
-                                "z" -> group.next.z
-                                _   -> model.pieceRotIndex
-                        Nothing ->
-                            model.pieceRotIndex
-
                 -- Find the group in the list whose .rotation.index matches the target index
                 findGroupByRotationIndex idx =
-                    List.Extra.find (\g -> g.rotation.index == idx) rotationGroups
-
-                -- Use the .rotation.index from the next group, not the list index
-                nextGroup =
-                    case currentGroup of
-                        Just group ->
-                            let
-                                targetIndex =
-                                    case keyStr of
-                                        "a" -> group.next.a
-                                        "d" -> group.next.d
-                                        "w" -> group.next.w
-                                        "s" -> group.next.s
-                                        "q" -> group.next.q
-                                        "e" -> group.next.e
-                                        "z" -> group.next.z
-                                        _   -> group.rotation.index
-                            in
-                            findGroupByRotationIndex targetIndex
-                        Nothing ->
-                            Nothing
-
-                -- If found, use the index in the list for pieceRotIndex, and .rotation.index for display
-                (_, displayRotIndex) =
-                    case nextGroup of
-                        Just g ->
-                            let
-                                idxInList =
-                                    List.Extra.findIndex (\x -> x.rotation.index == g.rotation.index) rotationGroups
-                            in
-                            case idxInList of
-                                Just i -> (i, g.rotation.index)
-                                Nothing -> (model.pieceRotIndex, model.pieceRotIndex)
-                        Nothing ->
-                            (model.pieceRotIndex, model.pieceRotIndex)
+                    List.Extra.find (\g -> g.index == idx) rotationGroups
 
                 newRotIndex = case currentGroup of
                     Just cg -> rotByKey keyStr cg
