@@ -50,7 +50,6 @@ type Msg
     | WindowResize Float Float
     | KeyChanged Bool
     | MovePiece Int Int
-    | RotatePiece Axis Int
     | SwitchPieceType
     | PlacePiece
     | PlacePieceResult GameState
