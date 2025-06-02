@@ -1,8 +1,9 @@
-module Utils exposing (getCubeOffsets, mouseDecoder, keyCheck, keyToMsg, pTs)
+module Utils exposing (..)
 import Json.Decode as Decode
 import Types exposing (PieceType)
 import Rotations
 import Types exposing (..)
+import Constants exposing (boardSize, boardHeight)
 
 getCubeOffsets : PieceType -> Int -> List Rotations.Position3D
 getCubeOffsets pieceType rotIndex =
@@ -30,9 +31,7 @@ keyCheck isDown json =
     case Decode.decodeValue (Decode.field "key" Decode.string) json of
         Ok "Shift" ->
             KeyChanged isDown
-
-        _ ->
-            NoOp
+        _ -> NoOp
 
 
 keyToMsg : Decode.Value -> Msg
@@ -64,3 +63,26 @@ pTs pt = case pt of
     OShape -> "O"
     ZShape -> "Z"
     TShape -> "T"
+
+keepPieceInBounds : PieceType -> Int -> Int -> Int -> Int -> (Int, Int, Int)
+keepPieceInBounds pieceType newRotIndex pieceX pieceY pieceZ =
+    let
+        cubeOffsets = getCubeOffsets pieceType newRotIndex
+        minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+        maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+        minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+        maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+        minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+        maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+
+        minX = 0 - minDx
+        maxX = boardSize - 1 - maxDx
+        minY = 0 - minDy
+        maxY = boardSize - 1 - maxDy
+        minZ = 0 - minDz
+        maxZ = boardHeight - 1 - maxDz
+
+        newX = clamp minX maxX pieceX
+        newY = clamp minY maxY pieceY
+        newZ = clamp minZ maxZ pieceZ
+    in (newX, newY, newZ)

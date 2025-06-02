@@ -2,7 +2,7 @@ module UpdatePieceRotation exposing (..)
 import Rotations exposing (Rotation, Position3D, tBlockRotations, lBlockRotations, zBlockRotations, oBlockRotations)
 import Set
 import Types exposing (..)
-import Utils exposing (getCubeOffsets)
+import Utils exposing (getCubeOffsets, keepPieceInBounds)
 import Constants exposing (boardSize, boardHeight)
 import List.Extra
 -- basic concept: use a given rot mat for each key (w a s d), apply it to the piece, then
@@ -40,26 +40,10 @@ updatePiceRotation keyStr model =
 
                 newRotIndex = case currentGroup of
                     Just cg -> rotByKey keyStr cg
-                    _ -> 0 --hmm
+                    _ -> 0 --defaulting to 0
 
-                cubeOffsets = getCubeOffsets model.pieceType newRotIndex
-                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-
-                minX = 0 - minDx
-                maxX = boardSize - 1 - maxDx
-                minY = 0 - minDy
-                maxY = boardSize - 1 - maxDy
-                minZ = 0 - minDz
-                maxZ = boardHeight - 1 - maxDz
-
-                newX = clamp minX maxX model.pieceX
-                newY = clamp minY maxY model.pieceY
-                newZ = clamp minZ maxZ model.pieceZ
+                (newX, newY, newZ) = 
+                    keepPieceInBounds model.pieceType newRotIndex model.pieceX model.pieceY model.pieceZ
             in
             ( { model
                 | pieceRotIndex = newRotIndex
