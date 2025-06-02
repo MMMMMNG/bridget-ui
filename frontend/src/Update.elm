@@ -337,7 +337,11 @@ update msg model =
                         Cmd.none
 
                 sendInvalidLoad =
-                    if not showInvalid then
+                    if (not showInvalid) && (not (case newGameState of
+                                                    Just gameStateVal -> gameStateVal.gameOver
+                                                    Nothing -> False
+                                                ))
+                    then
                         [ Task.succeed InvalidLoad |> Task.perform identity ]
                     else
                         []
