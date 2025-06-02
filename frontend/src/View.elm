@@ -211,9 +211,28 @@ view model =
         , Html.Attributes.style "user-select" "none"
         ]
         (
+            (if model.aiThinking then
+                [ Html.div
+                    [ Html.Attributes.style "position" "absolute"
+                    , Html.Attributes.style "top" "0"
+                    , Html.Attributes.style "left" "0"
+                    , Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "background" "#e0e0e0"
+                    , Html.Attributes.style "color" "#333"
+                    , Html.Attributes.style "font-size" "20px"
+                    , Html.Attributes.style "text-align" "center"
+                    , Html.Attributes.style "padding" "12px"
+                    , Html.Attributes.style "z-index" "101"
+                    ]
+                    [ Html.text "AI thinking..." ]
+                ]
+              else
+                []
+            )
+            ++
             shapeSvgs
             ++
-            (if model.showInvalid then
+            (if model.showInvalid && not model.aiThinking then
                 [ Html.div
                     [ Html.Attributes.style "position" "absolute"
                     , Html.Attributes.style "top" "0"
@@ -234,20 +253,22 @@ view model =
             ++
             [
             Html.button
-                [ Html.Attributes.style "position" "absolute"
-                , Html.Attributes.style "z-index" "10"
-                , Html.Attributes.style "top" "50%"
-                , Html.Attributes.style "right" "20px"
-                , Html.Attributes.style "transform" "translateY(-50%)"
-                , Html.Attributes.style "padding" "16px 24px"
-                , Html.Attributes.style "font-size" "18px"
-                , Html.Attributes.style "background" "#6c47a6"
-                , Html.Attributes.style "color" "white"
-                , Html.Attributes.style "border" "none"
-                , Html.Attributes.style "border-radius" "8px"
-                , Html.Attributes.style "box-shadow" "0 2px 8px rgba(0,0,0,0.15)"
-                , Html.Events.onClick PlacePiece
-                ]
+                ([ Html.Attributes.style "position" "absolute"
+                 , Html.Attributes.style "z-index" "10"
+                 , Html.Attributes.style "top" "50%"
+                 , Html.Attributes.style "right" "20px"
+                 , Html.Attributes.style "transform" "translateY(-50%)"
+                 , Html.Attributes.style "padding" "16px 24px"
+                 , Html.Attributes.style "font-size" "18px"
+                 , Html.Attributes.style "background" (if model.aiThinking then "#aaa" else "#6c47a6")
+                 , Html.Attributes.style "color" "white"
+                 , Html.Attributes.style "border" "none"
+                 , Html.Attributes.style "border-radius" "8px"
+                 , Html.Attributes.style "box-shadow" "0 2px 8px rgba(0,0,0,0.15)"
+                 , Html.Events.onClick PlacePiece
+                 ]
+                 ++ (if model.aiThinking then [ Html.Attributes.disabled True ] else [])
+                )
                 [ Html.text "Place" ]
             , Html.div
                 [ Html.Attributes.style "position" "absolute"

@@ -39,6 +39,7 @@ type alias Model =
     , showInvalid : Bool
     , inventory : Inventory
     , pieceSelectDisabled : Bool
+    , aiThinking : Bool
     }
 
 type Msg
@@ -56,6 +57,7 @@ type Msg
     | SelectPieceType PieceType
     | PlacePieceHttpResult (Result Http.Error (Maybe GameState))
     | HideInvalid
+    | InvalidLoad
 
 type Axis = X | Y | Z 
 

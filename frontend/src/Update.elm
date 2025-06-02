@@ -3,8 +3,7 @@ module Update exposing (update)
 import Types exposing (..)
 import Constants exposing (boardSize, boardHeight)
 import Rotations
-import Utils exposing (getCubeOffsets, mouseDecoder, keyCheck, keyToMsg, pTs)
-import Json.Decode as Decode
+import Utils exposing (getCubeOffsets, pTs)
 import Task
 import Json.Decode as D
 import Http
@@ -71,6 +70,18 @@ gsDecoder =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        InvalidLoad ->
+            let
+                command = "-1 -1 -1 -1"
+                u = Url.Builder.crossOrigin "http://localhost:3000" [ "move", command ] []
+            in
+            ( { model | aiThinking = True, showInvalid = False }
+            , Http.get
+                { url = u
+                , expect = gsExpecter
+                }
+            )
+
         MouseDown x y ->
             ( { model
                 | isMouseDown = True
@@ -230,8 +241,12 @@ update msg model =
             , Cmd.none
             )
         
-        PlacePieceHttpResult (Err _) -> (model, Cmd.none)
-        PlacePieceHttpResult (Ok Nothing) -> (model, Cmd.none)
+        PlacePieceHttpResult (Err _) -> 
+            ( { model | aiThinking = False }, Cmd.none )
+
+        PlacePieceHttpResult (Ok Nothing) -> 
+            ( { model | aiThinking = False }, Cmd.none )
+
         PlacePieceHttpResult (Ok (Just gs)) ->
             let
                 newGameState = Just { gs | board = List.map identity gs.board }
@@ -319,6 +334,12 @@ update msg model =
                             |> Task.perform (\_ -> HideInvalid)
                     else
                         Cmd.none
+
+                sendInvalidLoad =
+                    if not showInvalid then
+                        [ Task.succeed InvalidLoad |> Task.perform identity ]
+                    else
+                        []
             in
             ( { model
                 | gameState = newGameState
@@ -326,8 +347,9 @@ update msg model =
                 , inventory = updatedInventory
                 , pieceType = nextPieceType
                 , pieceSelectDisabled = pieceSelectDisabled
+                , aiThinking = False
               }
-            , cmd
+            , Cmd.batch (cmd :: sendInvalidLoad)
             )
 
         HideInvalid ->
@@ -390,4 +412,3 @@ update msg model =
                     )
                 else
                     (model, Cmd.none)
-        

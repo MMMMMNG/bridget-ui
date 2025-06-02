@@ -1,23 +1,12 @@
 module BridgetPage exposing (main)
 
-import Block3d
 import Browser
 import Browser.Dom as Dom
 import Browser.Events
-import Color
-import Frame3d
 import Json.Decode as Decode
-import Length
-import Point3d
-import Scene3d
-import Scene3d.Material as Material
 import Task
-import Rotations
 import Update exposing (..)
 
-import Json.Decode as D
-import Url.Builder
-import Http
 import Types exposing (..)
 import View exposing (view)
 import Utils exposing (mouseDecoder, keyCheck, keyToMsg)
@@ -49,10 +38,14 @@ init _ =
       , showInvalid = showInvalidInit
       , inventory = initialInventory
       , pieceSelectDisabled = False
+      , aiThinking = False
       }
-    , Task.perform
-        (\vp -> WindowResize vp.scene.width vp.scene.height)
-        Dom.getViewport
+    , Cmd.batch
+        [ Task.perform
+            (\vp -> WindowResize vp.scene.width vp.scene.height)
+            Dom.getViewport
+        , Task.succeed InvalidLoad |> Task.perform identity
+        ]
     )
 
 -- SUBSCRIPTIONS
