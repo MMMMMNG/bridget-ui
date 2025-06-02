@@ -9,7 +9,6 @@ import Json.Decode as D
 import Http
 import Url.Builder
 import Process
-import List.Extra
 import UpdatePieceRotation exposing (updatePiceRotation)
 
 submitMove : PieceType -> Int -> Int -> Int -> Cmd Msg
@@ -38,6 +37,7 @@ submitMove piece rotIndex x y =
         , expect = gsExpecter
         }
 
+gsExpecter : Http.Expect Msg
 gsExpecter = Http.expectJson PlacePieceHttpResult gsDecoder
 
 gsDecoder : D.Decoder (Maybe GameState)
@@ -159,7 +159,7 @@ update msg model =
 
         RotatePiece axis dir ->
             let
-                (rotationGroups, maxIndex) =
+                (_, maxIndex) =
                     case model.pieceType of
                         LShape -> (Rotations.lBlockRotations, 24)
                         TShape -> (Rotations.tBlockRotations, 12)
@@ -197,45 +197,6 @@ update msg model =
             in
             ( { model
                 | pieceRotIndex = newIndex
-                , pieceX = newX
-                , pieceY = newY
-                , pieceZ = newZ
-              }
-            , Cmd.none
-            )
-
-        SwitchPieceType ->
-            let
-                newType =
-                    case model.pieceType of
-                        LShape -> TShape
-                        TShape -> ZShape
-                        ZShape -> OShape
-                        OShape -> LShape
-
-                newRotIndex = 0
-                cubeOffsets = getCubeOffsets newType newRotIndex
-                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
-                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
-                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
-
-                minX = 0 - minDx
-                maxX = boardSize - 1 - maxDx
-                minY = 0 - minDy
-                maxY = boardSize - 1 - maxDy
-                minZ = 0 - minDz
-                maxZ = boardHeight - 1 - maxDz
-
-                newX = clamp minX maxX model.pieceX
-                newY = clamp minY maxY model.pieceY
-                newZ = clamp minZ maxZ model.pieceZ
-            in
-            ( { model
-                | pieceType = newType
-                , pieceRotIndex = newRotIndex
                 , pieceX = newX
                 , pieceY = newY
                 , pieceZ = newZ

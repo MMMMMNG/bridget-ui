@@ -51,7 +51,6 @@ type Msg
     | KeyChanged Bool
     | MovePiece Int Int
     | RotatePiece Axis Int
-    | SwitchPieceType
     | PlacePiece
     | PlacePieceResult GameState
     | SelectPieceType PieceType
