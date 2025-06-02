@@ -15,6 +15,7 @@
             "elm/svg": "1.0.1",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
+            "elm-community/list-extra": "8.7.0",
             "ianmackenzie/elm-3d-camera": "3.1.0",
             "ianmackenzie/elm-3d-scene": "1.0.2",
             "ianmackenzie/elm-geometry": "3.11.0",

@@ -9,6 +9,7 @@ import Json.Decode as D
 import Http
 import Url.Builder
 import Process
+import List.Extra
 
 submitMove : PieceType -> Int -> Int -> Int -> Cmd Msg
 submitMove piece rotIndex x y =
@@ -422,8 +423,13 @@ update msg model =
                         ZShape -> Rotations.zBlockRotationGroups
                         OShape -> Rotations.oBlockRotationGroups
 
-                nextRotIndex =
-                    case List.drop model.pieceRotIndex rotationGroups |> List.head of
+                -- Find the current group by list index
+                currentGroup =
+                    List.drop model.pieceRotIndex rotationGroups |> List.head
+
+                -- Get the next group index in the list, based on the key pressed
+                nextGroupIndex =
+                    case currentGroup of
                         Just group ->
                             case keyStr of
                                 "a" -> group.next.a
@@ -432,11 +438,50 @@ update msg model =
                                 "s" -> group.next.s
                                 "q" -> group.next.q
                                 "e" -> group.next.e
+                                "z" -> group.next.z
                                 _   -> model.pieceRotIndex
                         Nothing ->
                             model.pieceRotIndex
 
-                cubeOffsets = getCubeOffsets model.pieceType nextRotIndex
+                -- Find the group in the list whose .rotation.index matches the target index
+                findGroupByRotationIndex idx =
+                    List.Extra.find (\g -> g.rotation.index == idx) rotationGroups
+
+                -- Use the .rotation.index from the next group, not the list index
+                nextGroup =
+                    case currentGroup of
+                        Just group ->
+                            let
+                                targetIndex =
+                                    case keyStr of
+                                        "a" -> group.next.a
+                                        "d" -> group.next.d
+                                        "w" -> group.next.w
+                                        "s" -> group.next.s
+                                        "q" -> group.next.q
+                                        "e" -> group.next.e
+                                        "z" -> group.next.z
+                                        _   -> group.rotation.index
+                            in
+                            findGroupByRotationIndex targetIndex
+                        Nothing ->
+                            Nothing
+
+                -- If found, use the index in the list for pieceRotIndex, and .rotation.index for display
+                (newRotIndex, displayRotIndex) =
+                    case nextGroup of
+                        Just g ->
+                            let
+                                idxInList =
+                                    List.Extra.findIndex (\x -> x.rotation.index == g.rotation.index) rotationGroups
+                            in
+                            case idxInList of
+                                Just i -> (i, g.rotation.index)
+                                Nothing -> (model.pieceRotIndex, model.pieceRotIndex)
+                        Nothing ->
+                            (model.pieceRotIndex, model.pieceRotIndex)
+
+                cubeOffsets = getCubeOffsets model.pieceType newRotIndex
                 minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
                 maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
                 minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
@@ -456,7 +501,7 @@ update msg model =
                 newZ = clamp minZ maxZ model.pieceZ
             in
             ( { model
-                | pieceRotIndex = nextRotIndex
+                | pieceRotIndex = newRotIndex
                 , pieceX = newX
                 , pieceY = newY
                 , pieceZ = newZ
