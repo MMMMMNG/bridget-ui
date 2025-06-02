@@ -62,7 +62,7 @@ view model =
                 Nothing ->
                     []
         entities =
-            chessboard ++ boardEntities ++ [ gamePiece model ] ++ compassEntities
+            chessboard ++ boardEntities ++ (gamePiece model :: compassEntities)
 
         currentPieceCubeOffsets = getCubeOffsets model.pieceType model.pieceRotIndex
         centerBlock =
