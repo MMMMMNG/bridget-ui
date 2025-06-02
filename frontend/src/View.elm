@@ -94,13 +94,6 @@ view model =
         miniShape pieceType (left, top) =
             let
                 miniOffsets = getCubeOffsets pieceType 0
-                color =
-                    case pieceType of
-                        OShape -> Color.yellow
-                        TShape -> Color.red
-                        ZShape -> Color.green
-                        LShape -> Color.orange
-                centerColor = Color.purple
                 size = 16
                 offset = 24
                 minX = List.minimum (List.map .x miniOffsets) |> Maybe.withDefault 0
