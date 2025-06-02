@@ -58,6 +58,7 @@ type Msg
     | PlacePieceHttpResult (Result Http.Error (Maybe GameState))
     | HideInvalid
     | InvalidLoad
+    | RotatePieceKey String
 
 type Axis = X | Y | Z 
 

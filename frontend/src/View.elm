@@ -73,15 +73,15 @@ view model =
 
         rotationIndexFromElm =
             let
-                rotations =
+                rotationGroups =
                     case model.pieceType of
-                        LShape -> Rotations.lBlockRotations
-                        TShape -> Rotations.tBlockRotations
-                        ZShape -> Rotations.zBlockRotations
-                        OShape -> Rotations.oBlockRotations
+                        LShape -> Rotations.lBlockRotationGroups
+                        TShape -> Rotations.tBlockRotationGroups
+                        ZShape -> Rotations.zBlockRotationGroups
+                        OShape -> Rotations.oBlockRotationGroups
             in
-            case List.drop model.pieceRotIndex rotations |> List.head of
-                Just rotation -> rotation.index
+            case List.drop model.pieceRotIndex rotationGroups |> List.head of
+                Just group -> group.rotation.index
                 Nothing -> model.pieceRotIndex
 
         centerCoords =

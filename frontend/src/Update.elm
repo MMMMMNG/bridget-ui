@@ -15,15 +15,15 @@ submitMove piece rotIndex x y =
     let
         actualRotIndex =
             let
-                rotations =
+                rotationGroups =
                     case piece of
-                        LShape -> Rotations.lBlockRotations
-                        TShape -> Rotations.tBlockRotations
-                        ZShape -> Rotations.zBlockRotations
-                        OShape -> Rotations.oBlockRotations
+                        LShape -> Rotations.lBlockRotationGroups
+                        TShape -> Rotations.tBlockRotationGroups
+                        ZShape -> Rotations.zBlockRotationGroups
+                        OShape -> Rotations.oBlockRotationGroups
             in
-            case List.drop rotIndex rotations |> List.head of
-                Just rotation -> rotation.index
+            case List.drop rotIndex rotationGroups |> List.head of
+                Just group -> group.rotation.index
                 Nothing -> rotIndex
 
         command = String.join " " [pTs piece,
@@ -157,12 +157,12 @@ update msg model =
 
         RotatePiece axis dir ->
             let
-                (rotations, maxIndex) =
+                (rotationGroups, maxIndex) =
                     case model.pieceType of
-                        LShape -> (Rotations.lBlockRotations, 24)
-                        TShape -> (Rotations.tBlockRotations, 12)
-                        ZShape -> (Rotations.zBlockRotations, 12)
-                        OShape -> (Rotations.oBlockRotations, 3)
+                        LShape -> (Rotations.lBlockRotationGroups, 24)
+                        TShape -> (Rotations.tBlockRotationGroups, 12)
+                        ZShape -> (Rotations.zBlockRotationGroups, 12)
+                        OShape -> (Rotations.oBlockRotationGroups, 3)
                 newIndex =
                     let
                         idx = model.pieceRotIndex + dir
@@ -412,3 +412,54 @@ update msg model =
                     )
                 else
                     (model, Cmd.none)
+
+        RotatePieceKey keyStr ->
+            let
+                rotationGroups =
+                    case model.pieceType of
+                        LShape -> Rotations.lBlockRotationGroups
+                        TShape -> Rotations.tBlockRotationGroups
+                        ZShape -> Rotations.zBlockRotationGroups
+                        OShape -> Rotations.oBlockRotationGroups
+
+                nextRotIndex =
+                    case List.drop model.pieceRotIndex rotationGroups |> List.head of
+                        Just group ->
+                            case keyStr of
+                                "a" -> group.next.a
+                                "d" -> group.next.d
+                                "w" -> group.next.w
+                                "s" -> group.next.s
+                                "q" -> group.next.q
+                                "e" -> group.next.e
+                                _   -> model.pieceRotIndex
+                        Nothing ->
+                            model.pieceRotIndex
+
+                cubeOffsets = getCubeOffsets model.pieceType nextRotIndex
+                minDx = List.minimum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                maxDx = List.maximum (List.map (\p -> p.x) cubeOffsets) |> Maybe.withDefault 0
+                minDy = List.minimum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                maxDy = List.maximum (List.map (\p -> p.y) cubeOffsets) |> Maybe.withDefault 0
+                minDz = List.minimum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+                maxDz = List.maximum (List.map (\p -> p.z) cubeOffsets) |> Maybe.withDefault 0
+
+                minX = 0 - minDx
+                maxX = boardSize - 1 - maxDx
+                minY = 0 - minDy
+                maxY = boardSize - 1 - maxDy
+                minZ = 0 - minDz
+                maxZ = boardHeight - 1 - maxDz
+
+                newX = clamp minX maxX model.pieceX
+                newY = clamp minY maxY model.pieceY
+                newZ = clamp minZ maxZ model.pieceZ
+            in
+            ( { model
+                | pieceRotIndex = nextRotIndex
+                , pieceX = newX
+                , pieceY = newY
+                , pieceZ = newZ
+              }
+            , Cmd.none
+            )

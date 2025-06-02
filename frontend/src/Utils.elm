@@ -7,15 +7,15 @@ import Types exposing (..)
 getCubeOffsets : PieceType -> Int -> List Rotations.Position3D
 getCubeOffsets pieceType rotIndex =
     let
-        rotations =
+        rotationGroups =
             case pieceType of
-                LShape -> Rotations.lBlockRotations
-                TShape -> Rotations.tBlockRotations
-                ZShape -> Rotations.zBlockRotations
-                OShape -> Rotations.oBlockRotations
+                LShape -> Rotations.lBlockRotationGroups
+                TShape -> Rotations.tBlockRotationGroups
+                ZShape -> Rotations.zBlockRotationGroups
+                OShape -> Rotations.oBlockRotationGroups
     in
-    case List.drop rotIndex rotations |> List.head of
-        Just rotation -> rotation.positions
+    case List.drop rotIndex rotationGroups |> List.head of
+        Just group -> group.rotation.positions
         Nothing -> []
 
 mouseDecoder : (Float -> Float -> Msg) -> Decode.Decoder Msg
@@ -37,15 +37,24 @@ keyCheck isDown json =
 
 keyToMsg : Decode.Value -> Msg
 keyToMsg json =
-    case Decode.decodeValue (Decode.field "key" Decode.string) json of
-        Ok "ArrowLeft"    -> MovePiece 0 -1
-        Ok "ArrowRight"  -> MovePiece 0 1
-        Ok "ArrowUp"  -> MovePiece -1 0
-        Ok "ArrowDown" -> MovePiece 1 0
-        Ok "d"          -> RotatePiece Z 1
-        Ok "a"          -> RotatePiece Z -1
-        _               -> NoOp
-
+    let
+        key =
+            case Decode.decodeValue (Decode.field "key" Decode.string) json of
+                Ok k -> k
+                Err _ -> ""
+    in
+    case key of
+        "ArrowLeft"  -> MovePiece 0 -1
+        "ArrowRight" -> MovePiece 0 1
+        "ArrowUp"    -> MovePiece -1 0
+        "ArrowDown"  -> MovePiece 1 0
+        "a"          -> RotatePieceKey "a"
+        "d"          -> RotatePieceKey "d"
+        "w"          -> RotatePieceKey "w"
+        "s"          -> RotatePieceKey "s"
+        "q"          -> RotatePieceKey "q"
+        "e"          -> RotatePieceKey "e"
+        _            -> NoOp
 
 pTs : PieceType -> String
 pTs pt = case pt of
