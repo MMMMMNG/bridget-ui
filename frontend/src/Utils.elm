@@ -55,6 +55,7 @@ keyToMsg json =
         "q"          -> RotatePieceKey "q"
         "e"          -> RotatePieceKey "e"
         "z"          -> RotatePieceKey "z"
+        "Enter"      -> PlacePiece
         _            -> NoOp
 
 pTs : PieceType -> String
