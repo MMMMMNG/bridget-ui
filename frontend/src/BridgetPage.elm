@@ -33,7 +33,6 @@ init _ =
       , pieceY = 3
       , pieceZ = 0
       , pieceType = LShape
-      , currentPlayer = Player1
       , gameState = Nothing
       , showInvalid = showInvalidInit
       , inventory = initialInventory

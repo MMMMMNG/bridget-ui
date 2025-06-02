@@ -9,11 +9,6 @@ type PieceType
     | ZShape
     | OShape
 
-
-type Player
-    = Player1
-    | Player2
-
 type alias Inventory =
     { l : Int
     , z : Int
@@ -34,7 +29,6 @@ type alias Model =
     , pieceY : Int
     , pieceZ : Int
     , pieceType : PieceType
-    , currentPlayer : Player
     , gameState : Maybe GameState
     , showInvalid : Bool
     , inventory : Inventory
