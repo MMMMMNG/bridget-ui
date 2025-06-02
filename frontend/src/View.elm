@@ -20,7 +20,6 @@ import Length
 import Scene3d.Material as Material
 import Constants exposing (boardSize, boardHeight, squareSize)
 import Utils exposing (getCubeOffsets)
-import Rotations
 
 view : Model -> Html Msg
 view model =
