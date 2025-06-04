@@ -39,15 +39,11 @@ RUN mkdir -p copy_to_distroless/
 RUN nix-shell --pure --run "ldd bazel-bin/bridget_backend | awk \"/=>/ {print \\\$3}\" | xargs -I {} cp -L {} copy_to_distroless/"
 RUN rm copy_to_distroless/libjvm.so
 
-# another gemini gem:
-# gets the openjdk path and copies the entire folder (700MB).
-RUN nix-shell --pure --run "ldd bazel-bin/bridget_backend | \
-    awk \"/openjdk/ {print \\\$3}\" | \
-    head -n 1 | \
-    sed -E \"s|(.*openjdk-11[^/]*).*|\\\\1|\" | \
-    xargs -I {} cp -rL {} /app/copy_to_distroless/openjdk"
 
-
+#build a smaller jre
+RUN nix-shell --pure --run "jlink --module-path \"$JAVA_HOME/jmods\" \
+    --add-modules java.base --output /app/copy_to_distroless/openjdk \
+    --no-header-files --no-man-pages --compress=2 --strip-debug"
 
 #second stage
 FROM gcr.io/distroless/static-debian12
@@ -60,4 +56,4 @@ COPY --from=build /app/bazel-bin/bridget_backend.runfiles/bridget_ui_ws/jar_depl
 #and copy the actual executable pls
 COPY --from=build /app/bazel-bin/bridget_backend .
 
-ENTRYPOINT ["/app/ld-linux-x86-64.so.2", "--library-path", "/app:/app/openjdk/lib/openjdk/lib/server", "/app/bridget_backend"]
+ENTRYPOINT ["/app/ld-linux-x86-64.so.2", "--library-path", "/app:/app/openjdk/lib/server", "/app/bridget_backend"]
