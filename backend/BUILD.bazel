@@ -3,6 +3,24 @@ load(
   "haskell_binary",
 )
 
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+pkg_tar(
+    name = "bridget_backend_bundle",
+    srcs = [":bridget_backend"], # This is the magic! Bazel will include the binary AND its runfiles.
+    #compression_level = -1, #no compression, since we're gonna uncompress it immediately
+    out = "bridget_backend_bundle.tar",
+    include_runfiles = True,
+    # The `strip_prefix` removes the bazel-bin path from the internal structure of the tarball.
+    # Adjust this path based on where your `my_app_binary` is located in `bazel-bin/`.
+    # For `//app:my_app_binary`, the output path is `bazel-bin/app/my_app_binary`.
+    #strip_prefix = "/app/bazel-bin/app",
+    # Defines the root directory inside the tarball where contents will be placed.
+    # This makes it easy to know where things are after extraction.
+    # install_base = "/opt/my_app", # e.g., `/opt/my_app/my_app_binary`, `/opt/my_app/config/app_config.json`
+    #mode = "0755", # Ensure the binary is executable
+)
+
 java_library(
     name = "wods_bridget_java",
     srcs = glob(["wodsBridget/src/**/*.java"]),
