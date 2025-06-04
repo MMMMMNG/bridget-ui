@@ -25,26 +25,39 @@ RUN nix-shell --pure --run "bazel build @inline-java//:inline-java"
 RUN nix-shell --pure --run "bazel build @stackage//:wai-cors"
 #copy the contents of the backend folder
 COPY . .
-#...then build. And gather all the dependencies into a tar
-# so we can easily copy it into the next stage which is much
-# more lightweight (hopefully)
-RUN nix-shell --pure --run "bazel build //:bridget_backend_bundle"
+#...then build.
+RUN nix-shell --pure --run "bazel build //:bridget_backend"
 
-# extract the tarball again, because I couldn't find a way
-# to just gather the deps without compressing 'em
-RUN mkdir -p copy_to_distroless/ && tar -xf bazel-bin/bridget_backend_bundle.tar -C ./copy_to_distroless
+# ok, this will be hacky. I will copy all of the .so files that are output by ldd into a single folder,
+# then remove the libjvm.so because it needs further libs from the openjdk folder
+# and then I'll just copy the openjdk folder.
+# this will probably be at least 700MB (600MB jdk + 115MB .so files). Maybe later use jlink to get a
+# slimmer jre
+RUN mkdir -p copy_to_distroless/
+                                                                                # | took a couple retries to get that escaping right
+                                                                                # V 
+RUN nix-shell --pure --run "ldd bazel-bin/bridget_backend | awk \"/=>/ {print \\\$3}\" | xargs -I {} cp -L {} copy_to_distroless/"
+RUN rm copy_to_distroless/libjvm.so
 
-#recreate expected directory structure...
-RUN cd ./copy_to_distroless && \
-    mkdir -p bridget_backend.runfiles/ && \
-    find . -maxdepth 1 -mindepth 1 ! -name "bridget_backend.runfiles" ! -name "bridget_backend" ! -name "*.so*" -exec mv {} bridget_backend.runfiles/ \;
+# another gemini gem:
+# gets the openjdk path and copies the entire folder (700MB).
+RUN nix-shell --pure --run "ldd bazel-bin/bridget_backend | \
+    awk \"/openjdk/ {print \\\$3}\" | \
+    head -n 1 | \
+    sed -E \"s|(.*openjdk-11[^/]*).*|\\\\1|\" | \
+    xargs -I {} cp -rL {} /app/copy_to_distroless/openjdk"
+
+
 
 #second stage
-FROM eclipse-temurin:11-jre-noble
+FROM gcr.io/distroless/static-debian12
 
-WORKDIR /home
+WORKDIR /app
 
-COPY --from=build /app/copy_to_distroless/. /home/
+COPY --from=build /app/copy_to_distroless/. .
+# get the bazel-built java code too
+COPY --from=build /app/bazel-bin/bridget_backend.runfiles/bridget_ui_ws/jar_deploy.jar /app/bridget_backend.runfiles/bridget_ui_ws/jar_deploy.jar
+#and copy the actual executable pls
+COPY --from=build /app/bazel-bin/bridget_backend .
 
-#ENTRYPOINT ["/bridget_backend"]
-ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["/app/ld-linux-x86-64.so.2", "--library-path", "/app:/app/openjdk/lib/openjdk/lib/server", "/app/bridget_backend"]
