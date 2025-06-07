@@ -22,12 +22,23 @@ docker compose up --build
 Then visit: http://localhost:8000/src/BridgetPage.elm  
 
 
-**NOTE:** The backend image was 11GB+ on my machine.  
-In my opinion that's better than installing 11GB+ worth of [nix](https://nixos.org/) and [bazel](https://bazel.build/) and [haskell](https://www.haskell.org/) dependencies on my PC, though.  
+**NOTE:** The backend image was 11GB during the build phase and took 38m to build on my machine.  
+In my opinion that's better than installing 11GB worth of [nix](https://nixos.org/) and [bazel](https://bazel.build/) and [haskell](https://www.haskell.org/) dependencies on my PC, though.  
 The frontend-image was ~300MB.
 
+### Running the full app without ridiculous build times
+If you don't want to give up 11GB of space and don't want to wait for 38 minutes, use the second stage of the backend docker image, which I serialized:
+
+```bash
+cd compose/prod
+docker load -i bridget_backend.tar
+docker compose up -d --no-build backend
+docker compose up -d frontend
+```
+This image is only around 700MB.
+
 ## Development
-start the dev-containers for front- and backend:
+start the dev-containers for front- and backend (there's no way around building the 11GB image in this case afaik):
 ```shell
 cd compose/dev
 docker compose up -d --build

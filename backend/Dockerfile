@@ -29,10 +29,7 @@ COPY . .
 RUN nix-shell --pure --run "bazel build //:bridget_backend"
 
 # ok, this will be hacky. I will copy all of the .so files that are output by ldd into a single folder,
-# then remove the libjvm.so because it needs further libs from the openjdk folder
-# and then I'll just copy the openjdk folder.
-# this will probably be at least 700MB (600MB jdk + 115MB .so files). Maybe later use jlink to get a
-# slimmer jre
+# then remove the libjvm.so because it needs to sit in the jre lib/ dir afaict
 RUN mkdir -p copy_to_distroless/
                                                                                 # | took a couple retries to get that escaping right
                                                                                 # V 

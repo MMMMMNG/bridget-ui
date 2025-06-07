@@ -1,6 +1,7 @@
 #bridget-ui production environment
 services:
   backend:
+    image: bridget_backend:latest
     build:
       context: ../../backend
     ports:
